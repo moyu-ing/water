@@ -1,0 +1,84 @@
+:root {
+  font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  color: #0f172a;
+  background:
+    radial-gradient(circle at top left, rgba(180, 227, 255, 0.65), transparent 28%),
+    radial-gradient(circle at right center, rgba(196, 255, 211, 0.45), transparent 22%),
+    linear-gradient(180deg, #f8fcff 0%, #eef5ff 45%, #f9fbff 100%);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  --brand: #0f6cbf;
+  --brand-2: #14b8a6;
+  --ink: #0f172a;
+  --muted: #64748b;
+  --line: rgba(148, 163, 184, 0.22);
+  --card: rgba(255, 255, 255, 0.88);
+  --shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  color: var(--ink);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+.page-shell {
+  width: min(1200px, calc(100% - 32px));
+  margin: 0 auto;
+}
+
+.soft-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.section-title h2,
+.section-title h3 {
+  margin: 0;
+}
+
+.admin-table-card {
+  padding: 20px;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+}
+
+.admin-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 768px) {
+  .page-shell {
+    width: min(100% - 20px, 100%);
+  }
+}
