@@ -6,16 +6,14 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("app_user")
-public class AppUser {
+@TableName("delivery_staff")
+public class DeliveryStaff {
     private Long id;
     private String username;
     private String password;
-    private String nickname;
+    private String name;
     private String phone;
     private Integer status;
-    private Integer barrelCount;
-    private Integer points;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }

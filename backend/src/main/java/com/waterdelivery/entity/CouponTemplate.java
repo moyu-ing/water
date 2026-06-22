@@ -7,19 +7,16 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("product")
-public class Product {
+@TableName("coupon_template")
+public class CouponTemplate {
     private Long id;
-    private Long categoryId;
     private String name;
-    private String subTitle;
-    private String image;
-    private String description;
-    private String spec;
-    private BigDecimal price;
-    private Integer stock;
-    private BigDecimal barrelDeposit;
-    private Integer isBarrel;
+    private String type;
+    private BigDecimal discountValue;
+    private BigDecimal minAmount;
+    private Integer totalQuantity;
+    private Integer receivedQuantity;
+    private Integer validDays;
     private Integer status;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;

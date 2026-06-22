@@ -49,6 +49,14 @@ public class JwtUtil {
         return createToken(claims);
     }
 
+    public String createDeliveryToken(Long staffId, String username) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("type", "DELIVERY_STAFF");
+        claims.put("staffId", staffId);
+        claims.put("username", username);
+        return createToken(claims);
+    }
+
     private String createToken(Map<String, Object> claims) {
         Instant expireTime = Instant.now().plus(jwtProperties.getExpireHours(), ChronoUnit.HOURS);
         return Jwts.builder()
@@ -66,6 +74,7 @@ public class JwtUtil {
         payload.setType((String) claims.get("type"));
         payload.setUserId(claims.get("userId", Long.class));
         payload.setAdminId(claims.get("adminId", Long.class));
+        payload.setStaffId(claims.get("staffId", Long.class));
         payload.setUsername((String) claims.get("username"));
         Object permissions = claims.get("permissions");
         if (permissions instanceof List<?> permissionList) {

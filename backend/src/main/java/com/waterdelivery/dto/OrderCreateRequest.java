@@ -8,4 +8,6 @@ public class OrderCreateRequest {
     @NotNull
     private Long addressId;
     private String remark;
+    private Long userCouponId;
+    private Integer usePoints;
 }

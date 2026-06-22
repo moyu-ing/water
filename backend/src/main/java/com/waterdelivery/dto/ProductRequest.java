@@ -20,5 +20,7 @@ public class ProductRequest {
     private BigDecimal price;
     @NotNull
     private Integer stock;
+    private BigDecimal barrelDeposit;
+    private Integer isBarrel;
     private Integer status = 1;
 }

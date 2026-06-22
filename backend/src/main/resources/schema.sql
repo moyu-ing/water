@@ -133,3 +133,86 @@ CREATE TABLE IF NOT EXISTS order_item (
     create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 配送员
+CREATE TABLE IF NOT EXISTS delivery_staff (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    name VARCHAR(50) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    status TINYINT NOT NULL DEFAULT 1,
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 配送任务
+CREATE TABLE IF NOT EXISTS delivery_task (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    order_id BIGINT NOT NULL,
+    staff_id BIGINT NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'ASSIGNED',
+    pickup_address VARCHAR(255),
+    delivery_address VARCHAR(255),
+    estimated_time DATETIME,
+    complete_time DATETIME,
+    photo_url VARCHAR(255),
+    remark VARCHAR(255),
+    barrel_returned INT NOT NULL DEFAULT 0,
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 优惠券模板
+CREATE TABLE IF NOT EXISTS coupon_template (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    type VARCHAR(32) NOT NULL,
+    discount_value DECIMAL(10,2) NOT NULL,
+    min_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+    total_quantity INT NOT NULL DEFAULT 0,
+    received_quantity INT NOT NULL DEFAULT 0,
+    valid_days INT NOT NULL DEFAULT 30,
+    status TINYINT NOT NULL DEFAULT 1,
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 用户优惠券
+CREATE TABLE IF NOT EXISTS user_coupon (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    template_id BIGINT NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'UNUSED',
+    receive_time DATETIME,
+    use_time DATETIME,
+    expire_time DATETIME,
+    order_id BIGINT,
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 积分流水
+CREATE TABLE IF NOT EXISTS user_points (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    points INT NOT NULL DEFAULT 0,
+    source VARCHAR(32) NOT NULL,
+    source_desc VARCHAR(255),
+    expire_time DATETIME,
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 安全添加列到已有表（首次运行添加列，再次运行报错不阻塞）
+ALTER TABLE product ADD COLUMN barrel_deposit DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE product ADD COLUMN is_barrel TINYINT DEFAULT 0;
+ALTER TABLE app_user ADD COLUMN barrel_count INT DEFAULT 0;
+ALTER TABLE app_user ADD COLUMN points INT DEFAULT 0;
+ALTER TABLE customer_order ADD COLUMN barrel_deposit_amount DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE customer_order ADD COLUMN barrel_return_count INT DEFAULT 0;
+ALTER TABLE customer_order ADD COLUMN barrel_return_deduct DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE customer_order ADD COLUMN coupon_id BIGINT DEFAULT NULL;
+ALTER TABLE customer_order ADD COLUMN coupon_discount DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE customer_order ADD COLUMN points_used INT DEFAULT 0;
+ALTER TABLE customer_order ADD COLUMN points_discount DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE customer_order ADD COLUMN points_earned INT DEFAULT 0;

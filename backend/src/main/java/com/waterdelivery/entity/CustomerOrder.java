@@ -21,6 +21,14 @@ public class CustomerOrder {
     private String fullAddress;
     @TableField("remark")
     private String remark;
+    private BigDecimal barrelDepositAmount;
+    private Integer barrelReturnCount;
+    private BigDecimal barrelReturnDeduct;
+    private Long couponId;
+    private BigDecimal couponDiscount;
+    private Integer pointsUsed;
+    private BigDecimal pointsDiscount;
+    private Integer pointsEarned;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }

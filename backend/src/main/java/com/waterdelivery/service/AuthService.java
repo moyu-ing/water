@@ -104,6 +104,8 @@ public class AuthService {
         info.put("username", user.getUsername());
         info.put("nickname", user.getNickname());
         info.put("phone", user.getPhone());
+        info.put("barrelCount", user.getBarrelCount());
+        info.put("points", user.getPoints());
         return info;
     }
 

@@ -29,6 +29,11 @@ public class CurrentContext {
         return payload == null ? null : payload.getAdminId();
     }
 
+    public static Long getStaffId() {
+        TokenPayload payload = HOLDER.get();
+        return payload == null ? null : payload.getStaffId();
+    }
+
     public static Set<String> getPermissions() {
         TokenPayload payload = HOLDER.get();
         return payload == null ? new HashSet<>() : payload.getPermissions();
@@ -45,6 +50,7 @@ public class CurrentContext {
         private String type;
         private Long userId;
         private Long adminId;
+        private Long staffId;
         private String username;
         private Set<String> permissions = new HashSet<>();
     }

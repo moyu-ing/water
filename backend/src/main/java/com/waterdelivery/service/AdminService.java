@@ -27,6 +27,7 @@ public class AdminService {
     private final CustomerOrderMapper customerOrderMapper;
     private final OrderItemMapper orderItemMapper;
     private final PasswordUtil passwordUtil;
+    private final com.waterdelivery.service.PointsService pointsService;
 
     public AdminService(AppUserMapper appUserMapper,
                         AdminUserMapper adminUserMapper,
@@ -38,7 +39,8 @@ public class AdminService {
                         ProductMapper productMapper,
                         CustomerOrderMapper customerOrderMapper,
                         OrderItemMapper orderItemMapper,
-                        PasswordUtil passwordUtil) {
+                        PasswordUtil passwordUtil,
+                        com.waterdelivery.service.PointsService pointsService) {
         this.appUserMapper = appUserMapper;
         this.adminUserMapper = adminUserMapper;
         this.adminRoleMapper = adminRoleMapper;
@@ -50,6 +52,7 @@ public class AdminService {
         this.customerOrderMapper = customerOrderMapper;
         this.orderItemMapper = orderItemMapper;
         this.passwordUtil = passwordUtil;
+        this.pointsService = pointsService;
     }
 
     public List<AppUser> listUsers() {
@@ -255,6 +258,8 @@ public class AdminService {
                     item.put("spec", product.getSpec());
                     item.put("price", product.getPrice());
                     item.put("stock", product.getStock());
+                    item.put("barrelDeposit", product.getBarrelDeposit());
+                    item.put("isBarrel", product.getIsBarrel());
                     item.put("status", product.getStatus());
                     item.put("categoryId", product.getCategoryId());
                     item.put("categoryName", categoryMap.get(product.getCategoryId()));
@@ -318,6 +323,89 @@ public class AdminService {
         order.setStatus(status);
         order.setUpdateTime(LocalDateTime.now());
         customerOrderMapper.updateById(order);
+        // 订单完成时发放积分（1元 = 1积分）
+        if ("COMPLETED".equals(status) && (order.getPointsEarned() == null || order.getPointsEarned() == 0)) {
+            int pointsEarned = order.getTotalAmount() != null ? (int) Math.round(order.getTotalAmount().doubleValue()) : 0;
+            if (pointsEarned > 0) {
+                pointsService.earnPoints(order.getUserId(), pointsEarned, "ORDER", "订单完成赠送积分");
+                order.setPointsEarned(pointsEarned);
+                order.setUpdateTime(LocalDateTime.now());
+                customerOrderMapper.updateById(order);
+            }
+        }
+    }
+
+    public Map<String, Object> getStatistics() {
+        Map<String, Object> stats = new java.util.HashMap<>();
+
+        // 基础计数
+        stats.put("totalUsers", appUserMapper.selectCount(null));
+        stats.put("totalProducts", productMapper.selectCount(null));
+        stats.put("totalCategories", categoryMapper.selectCount(null));
+        stats.put("totalOrders", customerOrderMapper.selectCount(null));
+
+        // 今日数据
+        java.time.LocalDateTime todayStart = java.time.LocalDate.now().atStartOfDay();
+        java.util.List<CustomerOrder> todayOrders = customerOrderMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<CustomerOrder>()
+                        .ge(CustomerOrder::getCreateTime, todayStart));
+        stats.put("todayNewOrders", todayOrders.size());
+        stats.put("todayRevenue", todayOrders.stream()
+                .map(CustomerOrder::getTotalAmount)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add));
+
+        // 订单状态分布
+        stats.put("pendingCount", countByStatus("PENDING_CONFIRM"));
+        stats.put("toDeliverCount", countByStatus("TO_DELIVER"));
+        stats.put("completedCount", countByStatus("COMPLETED"));
+        stats.put("cancelledCount", countByStatus("CANCELLED"));
+
+        // 低库存预警（库存 < 10 且上架中）
+        java.util.List<Product> lowStock = productMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Product>()
+                        .lt(Product::getStock, 10)
+                        .eq(Product::getStatus, 1));
+        stats.put("lowStockProducts", lowStock);
+
+        // 近7日订单趋势
+        java.util.List<Map<String, Object>> trend = new java.util.ArrayList<>();
+        for (int i = 6; i >= 0; i--) {
+            java.time.LocalDate date = java.time.LocalDate.now().minusDays(i);
+            Long count = customerOrderMapper.selectCount(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<CustomerOrder>()
+                            .ge(CustomerOrder::getCreateTime, date.atStartOfDay())
+                            .lt(CustomerOrder::getCreateTime, date.plusDays(1).atStartOfDay()));
+            Map<String, Object> day = new java.util.HashMap<>();
+            day.put("date", date.toString());
+            day.put("count", count);
+            trend.add(day);
+        }
+        stats.put("sevenDayTrend", trend);
+
+        // 分类商品数量 TOP5
+        java.util.List<Map<String, Object>> topCategories = new java.util.ArrayList<>();
+        java.util.Map<Long, String> categoryMap = categoryMapper.selectList(null).stream()
+                .collect(java.util.stream.Collectors.toMap(Category::getId, Category::getName));
+        java.util.Map<Long, Long> productCountMap = productMapper.selectList(null).stream()
+                .collect(java.util.stream.Collectors.groupingBy(Product::getCategoryId, java.util.stream.Collectors.counting()));
+        productCountMap.entrySet().stream()
+                .sorted(Map.Entry.<Long, Long>comparingByValue().reversed())
+                .limit(5)
+                .forEach(e -> {
+                    Map<String, Object> item = new java.util.HashMap<>();
+                    item.put("categoryName", categoryMap.getOrDefault(e.getKey(), "未知"));
+                    item.put("count", e.getValue());
+                    topCategories.add(item);
+                });
+        stats.put("topCategories", topCategories);
+
+        return stats;
+    }
+
+    private long countByStatus(String status) {
+        return customerOrderMapper.selectCount(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<CustomerOrder>()
+                        .eq(CustomerOrder::getStatus, status));
     }
 
     private void fillProduct(Product product, ProductRequest request) {
@@ -329,6 +417,8 @@ public class AdminService {
         product.setSpec(request.getSpec());
         product.setPrice(request.getPrice());
         product.setStock(request.getStock());
+        product.setBarrelDeposit(request.getBarrelDeposit());
+        product.setIsBarrel(request.getIsBarrel());
         product.setStatus(request.getStatus());
     }
 

@@ -32,7 +32,8 @@ public class AuthInterceptor implements HandlerInterceptor {
         }
         if (uri.equals("/api/user/auth/login")
                 || uri.equals("/api/user/auth/register")
-                || uri.equals("/api/admin/auth/login")) {
+                || uri.equals("/api/admin/auth/login")
+                || uri.equals("/api/delivery/login")) {
             return true;
         }
         String token = request.getHeader("Authorization");
@@ -46,6 +47,9 @@ public class AuthInterceptor implements HandlerInterceptor {
             }
             if (uri.startsWith("/api/admin") && !"ADMIN".equals(payload.getType())) {
                 throw new BizException("无效的管理员登录状态");
+            }
+            if (uri.startsWith("/api/delivery") && !"DELIVERY_STAFF".equals(payload.getType())) {
+                throw new BizException("无效的配送员登录状态");
             }
             CurrentContext.set(payload);
             RequirePermission permission = AnnotationUtils.findAnnotation(handlerMethod.getMethod(), RequirePermission.class);

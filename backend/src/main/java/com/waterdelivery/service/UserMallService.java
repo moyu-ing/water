@@ -25,19 +25,28 @@ public class UserMallService {
     private final CartItemMapper cartItemMapper;
     private final CustomerOrderMapper customerOrderMapper;
     private final OrderItemMapper orderItemMapper;
+    private final AppUserMapper appUserMapper;
+    private final com.waterdelivery.service.CouponService couponService;
+    private final com.waterdelivery.service.PointsService pointsService;
 
     public UserMallService(CategoryMapper categoryMapper,
                            ProductMapper productMapper,
                            UserAddressMapper userAddressMapper,
                            CartItemMapper cartItemMapper,
                            CustomerOrderMapper customerOrderMapper,
-                           OrderItemMapper orderItemMapper) {
+                           OrderItemMapper orderItemMapper,
+                           AppUserMapper appUserMapper,
+                           com.waterdelivery.service.CouponService couponService,
+                           com.waterdelivery.service.PointsService pointsService) {
         this.categoryMapper = categoryMapper;
         this.productMapper = productMapper;
         this.userAddressMapper = userAddressMapper;
         this.cartItemMapper = cartItemMapper;
         this.customerOrderMapper = customerOrderMapper;
         this.orderItemMapper = orderItemMapper;
+        this.appUserMapper = appUserMapper;
+        this.couponService = couponService;
+        this.pointsService = pointsService;
     }
 
     public List<Category> listActiveCategories() {
@@ -84,6 +93,8 @@ public class UserMallService {
         item.put("spec", product.getSpec());
         item.put("price", product.getPrice());
         item.put("stock", product.getStock());
+        item.put("barrelDeposit", product.getBarrelDeposit());
+        item.put("isBarrel", product.getIsBarrel());
         item.put("categoryId", product.getCategoryId());
         item.put("categoryName", category == null ? null : category.getName());
         return item;
@@ -235,19 +246,78 @@ public class UserMallService {
             }
             total = total.add(product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
         }
+        // 计算桶押金
+        BigDecimal barrelDepositTotal = BigDecimal.ZERO;
+        int barrelCount = 0;
+        for (CartItem item : checkedItems) {
+            Product product = productMap.get(item.getProductId());
+            if (product.getIsBarrel() != null && product.getIsBarrel() == 1
+                    && product.getBarrelDeposit() != null) {
+                barrelDepositTotal = barrelDepositTotal.add(
+                        product.getBarrelDeposit().multiply(BigDecimal.valueOf(item.getQuantity())));
+                barrelCount += item.getQuantity();
+            }
+        }
+        total = total.add(barrelDepositTotal);
+        // 优惠券抵扣
+        BigDecimal couponDiscount = BigDecimal.ZERO;
+        if (request.getUserCouponId() != null) {
+            couponDiscount = couponService.validateAndUseCoupon(request.getUserCouponId(), total);
+        }
+        // 积分抵扣
+        BigDecimal pointsDiscount = BigDecimal.ZERO;
+        int pointsUsed = 0;
+        if (request.getUsePoints() != null && request.getUsePoints() > 0) {
+            pointsUsed = Math.min(request.getUsePoints(), pointsService.getBalance(userId));
+            pointsDiscount = PointsService.pointsToAmount(pointsUsed);
+            pointsDiscount = pointsDiscount.min(total.subtract(couponDiscount));
+            if (pointsDiscount.compareTo(BigDecimal.ZERO) <= 0) {
+                pointsUsed = 0;
+            }
+        }
+        BigDecimal finalTotal = total.subtract(couponDiscount).subtract(pointsDiscount);
+        if (finalTotal.compareTo(BigDecimal.ZERO) < 0) {
+            finalTotal = BigDecimal.ZERO;
+        }
         CustomerOrder order = new CustomerOrder();
         order.setOrderNo("WD" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss")) + userId);
         order.setUserId(userId);
-        order.setTotalAmount(total);
+        order.setTotalAmount(finalTotal);
         order.setStatus("PENDING_CONFIRM");
         order.setPayType("COD");
         order.setContactName(address.getContactName());
         order.setContactPhone(address.getContactPhone());
         order.setFullAddress(address.getProvince() + address.getCity() + address.getDistrict() + address.getDetailAddress());
         order.setRemark(request.getRemark());
+        order.setBarrelDepositAmount(barrelDepositTotal);
+        order.setBarrelReturnCount(0);
+        order.setBarrelReturnDeduct(BigDecimal.ZERO);
+        order.setCouponId(request.getUserCouponId());
+        order.setCouponDiscount(couponDiscount);
+        order.setPointsUsed(pointsUsed);
+        order.setPointsDiscount(pointsDiscount);
+        order.setPointsEarned(0);
         order.setCreateTime(LocalDateTime.now());
         order.setUpdateTime(LocalDateTime.now());
         customerOrderMapper.insert(order);
+        // 标记优惠券已使用
+        if (request.getUserCouponId() != null && couponDiscount.compareTo(BigDecimal.ZERO) > 0) {
+            couponService.markCouponUsed(request.getUserCouponId(), order.getId());
+        }
+        // 扣除积分
+        if (pointsUsed > 0) {
+            pointsService.deductPoints(userId, pointsUsed);
+        }
+        // 更新用户桶持有数
+        if (barrelCount > 0) {
+            AppUser appUser = appUserMapper.selectById(userId);
+            if (appUser != null) {
+                int currentBarrelCount = appUser.getBarrelCount() != null ? appUser.getBarrelCount() : 0;
+                appUser.setBarrelCount(currentBarrelCount + barrelCount);
+                appUser.setUpdateTime(LocalDateTime.now());
+                appUserMapper.updateById(appUser);
+            }
+        }
         for (CartItem cartItem : checkedItems) {
             Product product = productMap.get(cartItem.getProductId());
             product.setStock(product.getStock() - cartItem.getQuantity());
@@ -304,6 +374,14 @@ public class UserMallService {
         result.put("contactPhone", order.getContactPhone());
         result.put("fullAddress", order.getFullAddress());
         result.put("remark", order.getRemark());
+        result.put("barrelDepositAmount", order.getBarrelDepositAmount());
+        result.put("barrelReturnCount", order.getBarrelReturnCount());
+        result.put("barrelReturnDeduct", order.getBarrelReturnDeduct());
+        result.put("couponId", order.getCouponId());
+        result.put("couponDiscount", order.getCouponDiscount());
+        result.put("pointsUsed", order.getPointsUsed());
+        result.put("pointsDiscount", order.getPointsDiscount());
+        result.put("pointsEarned", order.getPointsEarned());
         result.put("createTime", order.getCreateTime());
         result.put("items", items);
         return result;

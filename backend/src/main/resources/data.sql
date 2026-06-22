@@ -26,11 +26,29 @@ INSERT IGNORE INTO admin_menu (id, parent_id, name, path, component, permission_
 (11, 0, '菜单编辑', '', '', 'menu:edit', 2, 11, 1, NOW(), NOW()),
 (12, 0, '分类编辑', '', '', 'category:edit', 2, 12, 1, NOW(), NOW()),
 (13, 0, '商品编辑', '', '', 'product:edit', 2, 13, 1, NOW(), NOW()),
-(14, 0, '订单编辑', '', '', 'order:edit', 2, 14, 1, NOW(), NOW());
+(14, 0, '订单编辑', '', '', 'order:edit', 2, 14, 1, NOW(), NOW()),
+(15, 0, '配送人员管理', '/admin/delivery-staff', 'admin/DeliveryStaffPage', 'delivery:view', 1, 9, 1, NOW(), NOW()),
+(16, 0, '配送任务管理', '/admin/delivery-tasks', 'admin/DeliveryTasksPage', 'delivery:view', 1, 10, 1, NOW(), NOW()),
+(17, 0, '配送管理编辑', '', '', 'delivery:edit', 2, 15, 1, NOW(), NOW()),
+(18, 0, '优惠券管理', '/admin/coupons', 'admin/CouponsPage', 'coupon:view', 1, 11, 1, NOW(), NOW()),
+(19, 0, '优惠券编辑', '', '', 'coupon:edit', 2, 16, 1, NOW(), NOW());
 
 INSERT IGNORE INTO admin_role_menu (id, role_id, menu_id) VALUES
 (1, 1, 1),(2, 1, 2),(3, 1, 3),(4, 1, 4),(5, 1, 5),(6, 1, 6),(7, 1, 7),(8, 1, 8),
-(9, 1, 9),(10, 1, 10),(11, 1, 11),(12, 1, 12),(13, 1, 13),(14, 1, 14);
+(9, 1, 9),(10, 1, 10),(11, 1, 11),(12, 1, 12),(13, 1, 13),(14, 1, 14),
+(15, 1, 15),(16, 1, 16),(17, 1, 17),(18, 1, 18),(19, 1, 19);
+
+-- 样本配送员（密码 delivery123 的 BCrypt 哈希）
+INSERT INTO delivery_staff (id, username, password, name, phone, status, create_time, update_time) VALUES
+(1, 'delivery01', '$2a$10$3zHWRm5NT/MhETCXlOC3wu.zoXb0axnJ9/QWZ4e8s/5dHjbSz/4kq', '张师傅', '13800001111', 1, NOW(), NOW()),
+(2, 'delivery02', '$2a$10$3zHWRm5NT/MhETCXlOC3wu.zoXb0axnJ9/QWZ4e8s/5dHjbSz/4kq', '李师傅', '13800002222', 1, NOW(), NOW())
+ON DUPLICATE KEY UPDATE name = VALUES(name), phone = VALUES(phone);
+
+-- 样本优惠券模板
+INSERT IGNORE INTO coupon_template (id, name, type, discount_value, min_amount, total_quantity, received_quantity, valid_days, status, create_time, update_time) VALUES
+(1, '新用户专享券', 'FULL_REDUCTION', 10.00, 50.00, 100, 0, 30, 1, NOW(), NOW()),
+(2, '满100减20', 'FULL_REDUCTION', 20.00, 100.00, 200, 0, 60, 1, NOW(), NOW()),
+(3, '9折优惠券', 'DISCOUNT', 10.00, 0, 150, 0, 30, 1, NOW(), NOW());
 
 INSERT IGNORE INTO category (id, parent_id, name, image, sort_num, status, create_time, update_time) VALUES
 (1, 0, '天然饮用水', 'https://dummyimage.com/640x420/c7e8ff/0f172a&text=Natural+Water', 1, 1, NOW(), NOW()),
