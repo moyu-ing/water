@@ -21,7 +21,10 @@ async function addCart() {
     return
   }
   await userApi.addCart({ productId: product.value.id, quantity: quantity.value, checked: 1 })
-  ElMessage.success('已加入购物车')
+  ElMessage.success({
+    message: '已加入购物车',
+    duration: 1000,
+  })
 }
 
 onMounted(loadDetail)
