@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { adminApi } from '../../api'
 
 const rows = ref([])
@@ -16,9 +16,13 @@ const form = reactive({
 })
 
 async function loadData() {
-  const [adminUsers, roleRows] = await Promise.all([adminApi.adminUsers(), adminApi.roles()])
-  rows.value = adminUsers
-  roles.value = roleRows
+  try {
+    const [adminUsers, roleRows] = await Promise.all([adminApi.adminUsers(), adminApi.roles()])
+    rows.value = adminUsers
+    roles.value = roleRows
+  } catch (e) {
+    ElMessage.error('加载管理员列表失败: ' + (e.message || '网络错误'))
+  }
 }
 
 function openCreate() {
@@ -34,21 +38,40 @@ function openEdit(row) {
 }
 
 async function submit() {
-  if (editingId.value) {
-    await adminApi.updateAdminUser(editingId.value, form)
-    ElMessage.success('管理员已更新')
-  } else {
-    await adminApi.saveAdminUser(form)
-    ElMessage.success('管理员已创建')
+  if (!editingId.value && !form.password.trim()) {
+    ElMessage.warning('请输入密码')
+    return
   }
-  dialogVisible.value = false
-  await loadData()
+  if (!form.username.trim()) {
+    ElMessage.warning('请输入账号')
+    return
+  }
+  try {
+    if (editingId.value) {
+      await adminApi.updateAdminUser(editingId.value, form)
+      ElMessage.success('管理员已更新')
+    } else {
+      await adminApi.saveAdminUser(form)
+      ElMessage.success('管理员已创建')
+    }
+    dialogVisible.value = false
+    await loadData()
+  } catch (e) {
+    ElMessage.error('保存管理员失败: ' + (e.message || '网络错误'))
+  }
 }
 
 async function removeRow(id) {
-  await adminApi.deleteAdminUser(id)
-  ElMessage.success('管理员已删除')
-  await loadData()
+  try {
+    await ElMessageBox.confirm('确定要删除该管理员吗？', '确认删除', { type: 'warning' })
+    await adminApi.deleteAdminUser(id)
+    ElMessage.success('管理员已删除')
+    await loadData()
+  } catch (e) {
+    if (e !== 'cancel' && e !== 'close') {
+      ElMessage.error('删除管理员失败: ' + (e.message || '网络错误'))
+    }
+  }
 }
 
 onMounted(loadData)

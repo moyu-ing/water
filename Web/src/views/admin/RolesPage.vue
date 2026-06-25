@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { adminApi } from '../../api'
 
 const rows = ref([])
@@ -16,9 +16,13 @@ const form = reactive({
 })
 
 async function loadData() {
-  const [roleRows, menuRows] = await Promise.all([adminApi.roles(), adminApi.menus()])
-  rows.value = roleRows
-  menus.value = menuRows
+  try {
+    const [roleRows, menuRows] = await Promise.all([adminApi.roles(), adminApi.menus()])
+    rows.value = roleRows
+    menus.value = menuRows
+  } catch (e) {
+    ElMessage.error('加载角色列表失败: ' + (e.message || '网络错误'))
+  }
 }
 
 function openCreate() {
@@ -34,21 +38,32 @@ function openEdit(row) {
 }
 
 async function submit() {
-  if (editingId.value) {
-    await adminApi.updateRole(editingId.value, form)
-    ElMessage.success('角色已更新')
-  } else {
-    await adminApi.saveRole(form)
-    ElMessage.success('角色已创建')
+  try {
+    if (editingId.value) {
+      await adminApi.updateRole(editingId.value, form)
+      ElMessage.success('角色已更新')
+    } else {
+      await adminApi.saveRole(form)
+      ElMessage.success('角色已创建')
+    }
+    dialogVisible.value = false
+    await loadData()
+  } catch (e) {
+    ElMessage.error('保存角色失败: ' + (e.message || '网络错误'))
   }
-  dialogVisible.value = false
-  await loadData()
 }
 
 async function removeRow(id) {
-  await adminApi.deleteRole(id)
-  ElMessage.success('角色已删除')
-  await loadData()
+  try {
+    await ElMessageBox.confirm('确定要删除该角色吗？', '确认删除', { type: 'warning' })
+    await adminApi.deleteRole(id)
+    ElMessage.success('角色已删除')
+    await loadData()
+  } catch (e) {
+    if (e !== 'cancel' && e !== 'close') {
+      ElMessage.error('删除角色失败: ' + (e.message || '网络错误'))
+    }
+  }
 }
 
 onMounted(loadData)

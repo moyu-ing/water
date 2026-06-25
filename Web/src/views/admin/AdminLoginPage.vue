@@ -14,11 +14,21 @@ const form = reactive({
 })
 
 async function submit() {
+  if (!form.username.trim()) {
+    ElMessage.warning('请输入管理员账号')
+    return
+  }
+  if (!form.password) {
+    ElMessage.warning('请输入密码')
+    return
+  }
   loading.value = true
   try {
     await adminStore.login(form)
     ElMessage.success('管理员登录成功')
     router.push(route.query.redirect || '/admin/dashboard')
+  } catch (e) {
+    ElMessage.error(e.message || '管理员登录失败，请检查账号密码')
   } finally {
     loading.value = false
   }

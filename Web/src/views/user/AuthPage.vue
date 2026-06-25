@@ -1,30 +1,69 @@
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '../../stores/user'
+import { useDeliveryStore } from '../../stores/delivery'
 import { userApi } from '../../api'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const deliveryStore = useDeliveryStore()
+
+const role = ref('user') // 'user' | 'delivery'
+
 const activeTab = ref('login')
 const loginForm = reactive({ username: '', password: '' })
 const registerForm = reactive({ username: '', password: '', nickname: '', phone: '' })
+const deliveryForm = reactive({ username: '', password: '' })
 const loading = ref(false)
 
+const isUser = computed(() => role.value === 'user')
+const isDelivery = computed(() => role.value === 'delivery')
+
 async function submitLogin() {
+  if (!loginForm.username.trim()) {
+    ElMessage.warning('请输入用户名')
+    return
+  }
+  if (!loginForm.password) {
+    ElMessage.warning('请输入密码')
+    return
+  }
   loading.value = true
   try {
     await userStore.login(loginForm)
     ElMessage.success('登录成功')
     router.push(route.query.redirect || '/')
+  } catch (e) {
+    ElMessage.error(e.message || '登录失败，请检查账号密码')
   } finally {
     loading.value = false
   }
 }
 
 async function submitRegister() {
+  if (!registerForm.username.trim()) {
+    ElMessage.warning('请输入用户名')
+    return
+  }
+  if (!registerForm.password) {
+    ElMessage.warning('请输入密码')
+    return
+  }
+  if (!registerForm.nickname.trim()) {
+    ElMessage.warning('请输入昵称')
+    return
+  }
+  if (!registerForm.phone.trim()) {
+    ElMessage.warning('请输入手机号')
+    return
+  }
+  if (!/^1[3-9]\d{9}$/.test(registerForm.phone.trim())) {
+    ElMessage.warning('请输入正确的手机号')
+    return
+  }
   loading.value = true
   try {
     await userApi.register(registerForm)
@@ -32,6 +71,29 @@ async function submitRegister() {
     activeTab.value = 'login'
     loginForm.username = registerForm.username
     loginForm.password = registerForm.password
+  } catch (e) {
+    ElMessage.error(e.message || '注册失败，请稍后重试')
+  } finally {
+    loading.value = false
+  }
+}
+
+async function submitDeliveryLogin() {
+  if (!deliveryForm.username.trim()) {
+    ElMessage.warning('请输入用户名')
+    return
+  }
+  if (!deliveryForm.password) {
+    ElMessage.warning('请输入密码')
+    return
+  }
+  loading.value = true
+  try {
+    await deliveryStore.login(deliveryForm)
+    ElMessage.success('配送员登录成功')
+    router.push(route.query.redirect || '/delivery')
+  } catch (e) {
+    ElMessage.error(e.message || '配送员登录失败，请检查账号密码')
   } finally {
     loading.value = false
   }
@@ -47,7 +109,16 @@ async function submitRegister() {
         <p>用户端下单、后台端运营、角色权限和商品数据全部打通。</p>
       </div>
       <div class="auth-form-panel">
-        <el-tabs v-model="activeTab">
+        <!-- 角色选择 -->
+        <div class="role-switch">
+          <el-radio-group v-model="role" size="default">
+            <el-radio-button value="user">普通用户</el-radio-button>
+            <el-radio-button value="delivery">配送员</el-radio-button>
+          </el-radio-group>
+        </div>
+
+        <!-- 用户登录/注册 -->
+        <el-tabs v-if="isUser" v-model="activeTab">
           <el-tab-pane label="登录" name="login">
             <el-form label-position="top">
               <el-form-item label="用户名"><el-input v-model="loginForm.username" /></el-form-item>
@@ -65,6 +136,15 @@ async function submitRegister() {
             </el-form>
           </el-tab-pane>
         </el-tabs>
+
+        <!-- 配送员登录 -->
+        <div v-if="isDelivery" class="delivery-form">
+          <el-form label-position="top" @submit.prevent="submitDeliveryLogin">
+            <el-form-item label="用户名"><el-input v-model="deliveryForm.username" /></el-form-item>
+            <el-form-item label="密码"><el-input v-model="deliveryForm.password" type="password" show-password /></el-form-item>
+            <el-button type="primary" :loading="loading" style="width: 100%" @click="submitDeliveryLogin">配送员登录</el-button>
+          </el-form>
+        </div>
       </div>
     </div>
   </div>
@@ -109,6 +189,16 @@ async function submitRegister() {
   padding: 18px;
   border-radius: 24px;
   background: rgba(255, 255, 255, 0.74);
+}
+
+.role-switch {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.delivery-form {
+  padding-top: 4px;
 }
 
 @media (max-width: 900px) {

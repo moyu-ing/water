@@ -11,8 +11,12 @@ const categories = ref([])
 const products = ref([])
 
 async function loadData() {
-  categories.value = await publicApi.categories()
-  products.value = await publicApi.products()
+  try {
+    categories.value = await publicApi.categories()
+    products.value = await publicApi.products()
+  } catch (e) {
+    ElMessage.error('加载首页数据失败: ' + (e.message || '网络错误'))
+  }
 }
 
 async function addCart(product) {
@@ -20,11 +24,15 @@ async function addCart(product) {
     router.push('/login')
     return
   }
-  await userApi.addCart({ productId: product.id, quantity: 1, checked: 1 })
-  ElMessage.success({
-    message: '已加入购物车',
-    duration: 1000,
-  })
+  try {
+    await userApi.addCart({ productId: product.id, quantity: 1, checked: 1 })
+    ElMessage.success({
+      message: '已加入购物车',
+      duration: 1000,
+    })
+  } catch (e) {
+    ElMessage.error('加入购物车失败: ' + (e.message || '网络错误'))
+  }
 }
 
 onMounted(loadData)

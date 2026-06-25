@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { ElMessage } from 'element-plus'
 import { userApi } from '../api'
 
 export const useUserStore = defineStore('user', {
@@ -33,6 +34,16 @@ export const useUserStore = defineStore('user', {
         localStorage.setItem('user_profile', JSON.stringify(this.profile))
       } catch (error) {
         this.logout()
+      }
+    },
+    async refreshProfile() {
+      if (!this.token) return
+      try {
+        const profile = await userApi.profile()
+        this.profile = profile
+        localStorage.setItem('user_profile', JSON.stringify(profile))
+      } catch (error) {
+        ElMessage.warning('刷新用户信息失败，显示的可能不是最新数据')
       }
     },
   },

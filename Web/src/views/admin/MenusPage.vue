@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { adminApi } from '../../api'
 
 const rows = ref([])
@@ -18,7 +18,11 @@ const form = reactive({
 })
 
 async function loadData() {
-  rows.value = await adminApi.menus()
+  try {
+    rows.value = await adminApi.menus()
+  } catch (e) {
+    ElMessage.error('加载菜单列表失败: ' + (e.message || '网络错误'))
+  }
 }
 
 function openCreate() {
@@ -34,21 +38,32 @@ function openEdit(row) {
 }
 
 async function submit() {
-  if (editingId.value) {
-    await adminApi.updateMenu(editingId.value, form)
-    ElMessage.success('菜单已更新')
-  } else {
-    await adminApi.saveMenu(form)
-    ElMessage.success('菜单已创建')
+  try {
+    if (editingId.value) {
+      await adminApi.updateMenu(editingId.value, form)
+      ElMessage.success('菜单已更新')
+    } else {
+      await adminApi.saveMenu(form)
+      ElMessage.success('菜单已创建')
+    }
+    dialogVisible.value = false
+    await loadData()
+  } catch (e) {
+    ElMessage.error('保存菜单失败: ' + (e.message || '网络错误'))
   }
-  dialogVisible.value = false
-  await loadData()
 }
 
 async function removeRow(id) {
-  await adminApi.deleteMenu(id)
-  ElMessage.success('菜单已删除')
-  await loadData()
+  try {
+    await ElMessageBox.confirm('确定要删除该菜单吗？', '确认删除', { type: 'warning' })
+    await adminApi.deleteMenu(id)
+    ElMessage.success('菜单已删除')
+    await loadData()
+  } catch (e) {
+    if (e !== 'cancel' && e !== 'close') {
+      ElMessage.error('删除菜单失败: ' + (e.message || '网络错误'))
+    }
+  }
 }
 
 onMounted(loadData)

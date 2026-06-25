@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { useAdminStore } from '../stores/admin'
 
 const router = useRouter()
@@ -18,11 +19,15 @@ const menuItems = computed(() => {
     { label: '分类管理', path: '/admin/categories', permission: 'category:view' },
     { label: '商品管理', path: '/admin/products', permission: 'product:view' },
     { label: '订单管理', path: '/admin/orders', permission: 'order:view' },
+    { label: '配送人员', path: '/admin/delivery-staff', permission: 'delivery:view' },
+    { label: '配送任务', path: '/admin/delivery-tasks', permission: 'delivery:view' },
+    { label: '优惠券管理', path: '/admin/coupons', permission: 'coupon:view' },
   ].filter((item) => permissions.has(item.permission))
 })
 
 function logout() {
   adminStore.logout()
+  ElMessage.success('已退出登录')
   router.push('/admin/login')
 }
 </script>

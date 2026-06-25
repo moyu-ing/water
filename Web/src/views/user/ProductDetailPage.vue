@@ -12,7 +12,11 @@ const product = ref(null)
 const quantity = ref(1)
 
 async function loadDetail() {
-  product.value = await publicApi.productDetail(route.params.id)
+  try {
+    product.value = await publicApi.productDetail(route.params.id)
+  } catch (e) {
+    ElMessage.error('加载商品详情失败: ' + (e.message || '网络错误'))
+  }
 }
 
 async function addCart() {
@@ -20,11 +24,15 @@ async function addCart() {
     router.push('/login')
     return
   }
-  await userApi.addCart({ productId: product.value.id, quantity: quantity.value, checked: 1 })
-  ElMessage.success({
-    message: '已加入购物车',
-    duration: 1000,
-  })
+  try {
+    await userApi.addCart({ productId: product.value.id, quantity: quantity.value, checked: 1 })
+    ElMessage.success({
+      message: '已加入购物车',
+      duration: 1000,
+    })
+  } catch (e) {
+    ElMessage.error('加入购物车失败: ' + (e.message || '网络错误'))
+  }
 }
 
 onMounted(loadDetail)

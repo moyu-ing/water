@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { userApi } from '../../api'
 import { useUserStore } from '../../stores/user'
 
@@ -19,7 +19,11 @@ const form = reactive({
 })
 
 async function loadAddresses() {
-  addresses.value = await userApi.addresses()
+  try {
+    addresses.value = await userApi.addresses()
+  } catch (e) {
+    ElMessage.error('加载地址列表失败: ' + (e.message || '网络错误'))
+  }
 }
 
 function openCreate() {
@@ -43,24 +47,54 @@ function openEdit(item) {
 }
 
 async function submit() {
-  if (editingId.value) {
-    await userApi.updateAddress(editingId.value, form)
-    ElMessage.success('地址已更新')
-  } else {
-    await userApi.saveAddress(form)
-    ElMessage.success('地址已添加')
+  if (!form.contactName.trim()) {
+    ElMessage.warning('请输入联系人姓名')
+    return
   }
-  dialogVisible.value = false
-  await loadAddresses()
+  if (!form.contactPhone.trim()) {
+    ElMessage.warning('请输入手机号')
+    return
+  }
+  if (!/^1[3-9]\d{9}$/.test(form.contactPhone.trim())) {
+    ElMessage.warning('请输入正确的手机号')
+    return
+  }
+  if (!form.detailAddress.trim()) {
+    ElMessage.warning('请输入详细地址')
+    return
+  }
+  try {
+    if (editingId.value) {
+      await userApi.updateAddress(editingId.value, form)
+      ElMessage.success('地址已更新')
+    } else {
+      await userApi.saveAddress(form)
+      ElMessage.success('地址已添加')
+    }
+    dialogVisible.value = false
+    await loadAddresses()
+  } catch (e) {
+    ElMessage.error('保存地址失败: ' + (e.message || '网络错误'))
+  }
 }
 
 async function removeAddress(id) {
-  await userApi.deleteAddress(id)
-  ElMessage.success('地址已删除')
-  await loadAddresses()
+  try {
+    await ElMessageBox.confirm('确定要删除该地址吗？', '确认删除', { type: 'warning' })
+    await userApi.deleteAddress(id)
+    ElMessage.success('地址已删除')
+    await loadAddresses()
+  } catch (e) {
+    if (e !== 'cancel' && e !== 'close') {
+      ElMessage.error('删除地址失败: ' + (e.message || '网络错误'))
+    }
+  }
 }
 
-onMounted(loadAddresses)
+onMounted(async () => {
+  await userStore.refreshProfile()
+  await loadAddresses()
+})
 </script>
 
 <template>
@@ -70,6 +104,10 @@ onMounted(loadAddresses)
         <h2>{{ userStore.profile?.nickname }}</h2>
         <p>账号：{{ userStore.profile?.username }}</p>
         <p>手机号：{{ userStore.profile?.phone }}</p>
+        <div class="profile-stats">
+          <div class="stat-badge">🪣 持有空桶: {{ userStore.profile?.barrelCount || 0 }} 个</div>
+          <div class="stat-badge">⭐ 可用积分: {{ userStore.profile?.points || 0 }} 分</div>
+        </div>
       </div>
     </section>
 
@@ -126,6 +164,19 @@ onMounted(loadAddresses)
 
 .profile-card p {
   color: var(--muted);
+}
+.profile-stats {
+  display: flex;
+  gap: 16px;
+  margin-top: 14px;
+}
+.stat-badge {
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(15,108,191,0.08);
+  color: var(--brand);
+  font-weight: 600;
+  font-size: 14px;
 }
 
 .address-grid {

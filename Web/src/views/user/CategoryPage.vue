@@ -15,14 +15,22 @@ const keyword = ref(route.query.keyword || '')
 const currentCategoryId = computed(() => Number(route.query.categoryId || 0))
 
 async function loadCategories() {
-  categories.value = await publicApi.categories()
+  try {
+    categories.value = await publicApi.categories()
+  } catch (e) {
+    ElMessage.error('加载分类失败: ' + (e.message || '网络错误'))
+  }
 }
 
 async function loadProducts() {
-  products.value = await publicApi.products({
-    categoryId: currentCategoryId.value || undefined,
-    keyword: keyword.value || undefined,
-  })
+  try {
+    products.value = await publicApi.products({
+      categoryId: currentCategoryId.value || undefined,
+      keyword: keyword.value || undefined,
+    })
+  } catch (e) {
+    ElMessage.error('加载商品失败: ' + (e.message || '网络错误'))
+  }
 }
 
 function filterByCategory(id) {
@@ -34,11 +42,15 @@ async function addCart(item) {
     router.push('/login')
     return
   }
-  await userApi.addCart({ productId: item.id, quantity: 1, checked: 1 })
-  ElMessage.success({
-    message: '已加入购物车',
-    duration: 1000,
-  })
+  try {
+    await userApi.addCart({ productId: item.id, quantity: 1, checked: 1 })
+    ElMessage.success({
+      message: '已加入购物车',
+      duration: 1000,
+    })
+  } catch (e) {
+    ElMessage.error('加入购物车失败: ' + (e.message || '网络错误'))
+  }
 }
 
 function search() {

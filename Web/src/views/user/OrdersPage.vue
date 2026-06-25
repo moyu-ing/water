@@ -1,11 +1,16 @@
 <script setup>
 import { onMounted, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import { userApi } from '../../api'
 
 const orders = ref([])
 
 async function loadOrders() {
-  orders.value = await userApi.orders()
+  try {
+    orders.value = await userApi.orders()
+  } catch (e) {
+    ElMessage.error('加载订单列表失败: ' + (e.message || '网络错误'))
+  }
 }
 
 onMounted(loadOrders)
@@ -32,7 +37,16 @@ onMounted(loadOrders)
           </div>
         </div>
         <div class="order-foot">
-          <span>{{ order.fullAddress }}</span>
+          <div>
+            <span>{{ order.fullAddress }}</span>
+            <div class="order-extras">
+              <span v-if="order.barrelDepositAmount > 0">🪣 桶押金: ¥{{ order.barrelDepositAmount }}</span>
+              <span v-if="order.barrelReturnCount > 0">🔄 回收空桶: {{ order.barrelReturnCount }}个</span>
+              <span v-if="order.couponDiscount > 0">🎫 优惠券: -¥{{ order.couponDiscount }}</span>
+              <span v-if="order.pointsDiscount > 0">⭐ 积分抵扣: -¥{{ order.pointsDiscount }}</span>
+              <span v-if="order.pointsEarned > 0">✨ 获得积分: +{{ order.pointsEarned }}</span>
+            </div>
+          </div>
           <strong>合计 ¥ {{ order.totalAmount }}</strong>
         </div>
       </article>
@@ -79,5 +93,15 @@ onMounted(loadOrders)
 
 .order-foot strong {
   color: var(--brand);
+}
+.order-extras {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 13px;
+}
+.order-extras span {
+  color: var(--muted);
 }
 </style>

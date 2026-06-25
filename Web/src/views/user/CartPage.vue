@@ -1,14 +1,20 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { userApi } from '../../api'
+import { useUserStore } from '../../stores/user'
 
 const router = useRouter()
+const userStore = useUserStore()
 const cartItems = ref([])
 const addresses = ref([])
 const addressId = ref()
 const creating = ref(false)
+const availableCoupons = ref([])
+const selectedCouponId = ref(null)
+const usePoints = ref(0)
+const pointsBalance = ref(0)
 
 const totalAmount = computed(() =>
   cartItems.value
@@ -17,25 +23,79 @@ const totalAmount = computed(() =>
     .toFixed(2),
 )
 
+const barrelDepositTotal = computed(() =>
+  cartItems.value
+    .filter((item) => item.checked === 1 && item.product?.isBarrel === 1)
+    .reduce((sum, item) => sum + Number(item.product?.barrelDeposit || 0) * item.quantity, 0)
+    .toFixed(2),
+)
+
+const grandTotal = computed(() =>
+  (Number(totalAmount.value) + Number(barrelDepositTotal.value)).toFixed(2),
+)
+
+const couponDiscountAmount = computed(() => {
+  if (!selectedCouponId.value) return 0
+  const coupon = availableCoupons.value.find(c => c.id === selectedCouponId.value)
+  if (!coupon) return 0
+  const subtotal = Number(grandTotal.value)
+  if (subtotal < Number(coupon.minAmount || 0)) return 0
+  if (coupon.type === 'FULL_REDUCTION') return Number(coupon.discountValue || 0)
+  if (coupon.type === 'DISCOUNT') return subtotal * Number(coupon.discountValue || 0) / 100
+  return 0
+})
+
+const pointsDiscountAmount = computed(() => {
+  if (usePoints.value <= 0) return 0
+  return Math.min(usePoints.value, pointsBalance.value) / 100
+})
+
+const finalTotal = computed(() => {
+  const total = Number(grandTotal.value) - couponDiscountAmount.value - pointsDiscountAmount.value
+  return Math.max(0, total).toFixed(2)
+})
+
 async function loadData() {
-  cartItems.value = await userApi.cart()
-  addresses.value = await userApi.addresses()
-  addressId.value = addresses.value.find((item) => item.isDefault === 1)?.id || addresses.value[0]?.id
+  try {
+    cartItems.value = await userApi.cart()
+    addresses.value = await userApi.addresses()
+    addressId.value = addresses.value.find((item) => item.isDefault === 1)?.id || addresses.value[0]?.id
+  } catch (e) {
+    ElMessage.error('加载购物车数据失败: ' + (e.message || '网络错误'))
+  }
+  try {
+    availableCoupons.value = await userApi.availableCoupons()
+  } catch { availableCoupons.value = [] }
+  try {
+    const pts = await userApi.pointsBalance()
+    pointsBalance.value = pts?.balance || 0
+  } catch { pointsBalance.value = 0 }
 }
 
 async function updateItem(item) {
-  await userApi.updateCart(item.id, {
-    productId: item.productId,
-    quantity: item.quantity,
-    checked: item.checked,
-  })
-  ElMessage.success('购物车已更新')
+  try {
+    await userApi.updateCart(item.id, {
+      productId: item.productId,
+      quantity: item.quantity,
+      checked: item.checked,
+    })
+    ElMessage.success('购物车已更新')
+  } catch (e) {
+    ElMessage.error('更新购物车失败: ' + (e.message || '网络错误'))
+  }
 }
 
 async function removeItem(id) {
-  await userApi.deleteCart(id)
-  ElMessage.success('已删除')
-  await loadData()
+  try {
+    await ElMessageBox.confirm('确定要从购物车移除该商品吗？', '确认移除', { type: 'warning' })
+    await userApi.deleteCart(id)
+    ElMessage.success('已删除')
+    await loadData()
+  } catch (e) {
+    if (e !== 'cancel' && e !== 'close') {
+      ElMessage.error('删除购物车商品失败: ' + (e.message || '网络错误'))
+    }
+  }
 }
 
 async function createOrder() {
@@ -46,9 +106,17 @@ async function createOrder() {
   }
   creating.value = true
   try {
-    await userApi.createOrder({ addressId: addressId.value, remark: '网页下单' })
+    await userApi.createOrder({
+      addressId: addressId.value,
+      remark: '网页下单',
+      userCouponId: selectedCouponId.value || undefined,
+      usePoints: usePoints.value > 0 ? usePoints.value : undefined,
+    })
     ElMessage.success('订单已创建')
+    await userStore.refreshProfile()
     router.push('/orders')
+  } catch (e) {
+    ElMessage.error('创建订单失败: ' + (e.message || '网络错误'))
   } finally {
     creating.value = false
   }
@@ -92,9 +160,30 @@ onMounted(loadData)
             :value="item.id"
           />
         </el-select>
+        <!-- 优惠券选择 -->
+        <div v-if="availableCoupons.length" class="coupon-section">
+          <el-select v-model="selectedCouponId" placeholder="选择优惠券" clearable style="width:100%;margin-top:14px">
+            <el-option
+              v-for="c in availableCoupons"
+              :key="c.id"
+              :label="`${c.name} (${c.type === 'FULL_REDUCTION' ? '减¥' + c.discountValue : c.discountValue + '%'})`"
+              :value="c.id"
+            />
+          </el-select>
+        </div>
+        <!-- 积分使用 -->
+        <div class="points-section">
+          <span>⭐ 可用积分: {{ pointsBalance }}（100分=1元）</span>
+          <el-input-number v-model="usePoints" :min="0" :max="pointsBalance" :step="100" placeholder="使用积分" style="width:100%;margin-top:8px" />
+        </div>
         <div class="order-total">
-          <span>合计</span>
-          <strong>¥ {{ totalAmount }}</strong>
+          <div class="total-lines">
+            <div class="total-line"><span>商品金额</span><span>¥ {{ totalAmount }}</span></div>
+            <div class="total-line" v-if="barrelDepositTotal > 0"><span>🪣 桶押金</span><span>¥ {{ barrelDepositTotal }}</span></div>
+            <div class="total-line" v-if="couponDiscountAmount > 0"><span>🎫 优惠券</span><span style="color:#14b8a6">-¥ {{ couponDiscountAmount.toFixed(2) }}</span></div>
+            <div class="total-line" v-if="pointsDiscountAmount > 0"><span>⭐ 积分抵扣</span><span style="color:#14b8a6">-¥ {{ pointsDiscountAmount.toFixed(2) }}</span></div>
+          </div>
+          <div class="total-line grand"><span>合计</span><strong>¥ {{ finalTotal }}</strong></div>
         </div>
         <el-button type="primary" size="large" :loading="creating" @click="createOrder">提交订单</el-button>
       </aside>
@@ -157,14 +246,34 @@ onMounted(loadData)
   margin-top: 0;
 }
 
+.coupon-section, .points-section {
+  margin-top: 8px;
+}
+.points-section span {
+  font-size: 13px;
+  color: var(--muted);
+}
 .order-total {
+  margin: 18px 0;
+}
+.total-lines {
+  margin-bottom: 12px;
+}
+.total-line {
   display: flex;
   justify-content: space-between;
-  margin: 18px 0;
-  font-size: 18px;
+  margin: 6px 0;
+  color: var(--muted);
+  font-size: 14px;
 }
-
-.order-total strong {
+.total-line.grand {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 18px;
+  color: #333;
+}
+.total-line.grand strong {
   color: var(--brand);
   font-size: 28px;
 }

@@ -13,7 +13,11 @@ const categories = ref([])
 const activePath = computed(() => route.path)
 
 async function loadCategories() {
-  categories.value = await publicApi.categories()
+  try {
+    categories.value = await publicApi.categories()
+  } catch (e) {
+    ElMessage.error('加载分类导航失败: ' + (e.message || '网络错误'))
+  }
 }
 
 function logout() {

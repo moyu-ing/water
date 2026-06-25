@@ -1,11 +1,12 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
-import { adminApi } from '../../api'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { adminApi, uploadFile } from '../../api'
 
 const rows = ref([])
 const dialogVisible = ref(false)
 const editingId = ref(null)
+const imageUploadRef = ref(null)
 const form = reactive({
   parentId: 0,
   name: '',
@@ -15,12 +16,17 @@ const form = reactive({
 })
 
 async function loadData() {
-  rows.value = await adminApi.categories()
+  try {
+    rows.value = await adminApi.categories()
+  } catch (e) {
+    ElMessage.error('加载分类列表失败: ' + (e.message || '网络错误'))
+  }
 }
 
 function openCreate() {
   editingId.value = null
   Object.assign(form, { parentId: 0, name: '', image: '', sortNum: 0, status: 1 })
+  imageUploadRef.value?.clearFiles()
   dialogVisible.value = true
 }
 
@@ -30,22 +36,60 @@ function openEdit(row) {
   dialogVisible.value = true
 }
 
-async function submit() {
-  if (editingId.value) {
-    await adminApi.updateCategory(editingId.value, form)
-    ElMessage.success('分类已更新')
-  } else {
-    await adminApi.saveCategory(form)
-    ElMessage.success('分类已创建')
+async function handleImageUpload(file) {
+  try {
+    const urls = await uploadFile(file)
+    if (urls && urls.length > 0) {
+      form.image = urls[0]
+      ElMessage.success('图片上传成功')
+    }
+  } catch (e) {
+    ElMessage.error('图片上传失败: ' + (e.message || '未知错误'))
   }
-  dialogVisible.value = false
-  await loadData()
+  return false
+}
+
+function beforeImageUpload(file) {
+  const isImage = file.type.startsWith('image/')
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件')
+    return false
+  }
+  const isLt10M = file.size / 1024 / 1024 < 10
+  if (!isLt10M) {
+    ElMessage.error('图片大小不能超过 10MB')
+    return false
+  }
+  return true
+}
+
+async function submit() {
+  try {
+    if (editingId.value) {
+      await adminApi.updateCategory(editingId.value, form)
+      ElMessage.success('分类已更新')
+    } else {
+      await adminApi.saveCategory(form)
+      ElMessage.success('分类已创建')
+    }
+    dialogVisible.value = false
+    await loadData()
+  } catch (e) {
+    ElMessage.error('保存分类失败: ' + (e.message || '网络错误'))
+  }
 }
 
 async function removeRow(id) {
-  await adminApi.deleteCategory(id)
-  ElMessage.success('分类已删除')
-  await loadData()
+  try {
+    await ElMessageBox.confirm('确定要删除该分类吗？', '确认删除', { type: 'warning' })
+    await adminApi.deleteCategory(id)
+    ElMessage.success('分类已删除')
+    await loadData()
+  } catch (e) {
+    if (e !== 'cancel' && e !== 'close') {
+      ElMessage.error('删除分类失败: ' + (e.message || '网络错误'))
+    }
+  }
 }
 
 onMounted(loadData)
@@ -75,7 +119,21 @@ onMounted(loadData)
     <el-dialog v-model="dialogVisible" :title="editingId ? '编辑分类' : '新增分类'" width="560px">
       <el-form label-width="90px">
         <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
-        <el-form-item label="图片"><el-input v-model="form.image" /></el-form-item>
+        <el-form-item label="图片">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <el-upload
+              ref="imageUploadRef"
+              :http-request="({ file }) => handleImageUpload(file)"
+              :before-upload="beforeImageUpload"
+              :show-file-list="false"
+              accept="image/*"
+            >
+              <el-button type="primary" plain>选择图片上传</el-button>
+            </el-upload>
+            <el-input v-model="form.image" placeholder="或手动输入图片URL" style="flex:1" />
+          </div>
+          <img v-if="form.image" :src="form.image" style="width:120px;height:80px;object-fit:cover;border-radius:8px;margin-top:8px;" />
+        </el-form-item>
         <el-form-item label="排序"><el-input-number v-model="form.sortNum" :min="0" /></el-form-item>
         <el-form-item label="状态"><el-switch v-model="form.status" :active-value="1" :inactive-value="0" /></el-form-item>
       </el-form>

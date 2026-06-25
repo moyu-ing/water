@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { ElMessage } from 'element-plus'
 import { adminApi } from '../api'
 
 export const useAdminStore = defineStore('admin', {

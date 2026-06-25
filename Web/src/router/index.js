@@ -3,6 +3,7 @@ import { ElMessage } from "element-plus";
 import { pinia } from "../stores";
 import { useAdminStore } from "../stores/admin";
 import { useUserStore } from "../stores/user";
+import { useDeliveryStore } from "../stores/delivery";
 
 const routes = [
   {
@@ -107,7 +108,42 @@ const routes = [
         component: () => import("../views/admin/OrdersPage.vue"),
         meta: { permission: "order:view" },
       },
+      {
+        path: "delivery-staff",
+        name: "admin-delivery-staff",
+        component: () => import("../views/admin/DeliveryStaffPage.vue"),
+        meta: { permission: "delivery:view" },
+      },
+      {
+        path: "delivery-tasks",
+        name: "admin-delivery-tasks",
+        component: () => import("../views/admin/DeliveryTasksPage.vue"),
+        meta: { permission: "delivery:view" },
+      },
+      {
+        path: "coupons",
+        name: "admin-coupons",
+        component: () => import("../views/admin/CouponsPage.vue"),
+        meta: { permission: "coupon:view" },
+      },
       { path: "", redirect: "/admin/dashboard" },
+    ],
+  },
+  {
+    path: "/delivery/login",
+    name: "delivery-login",
+    component: () => import("../views/delivery/DeliveryLoginPage.vue"),
+  },
+  {
+    path: "/delivery",
+    component: () => import("../layouts/DeliveryLayout.vue"),
+    meta: { requiresDelivery: true },
+    children: [
+      {
+        path: "",
+        name: "delivery-tasks",
+        component: () => import("../views/delivery/DeliveryTasksPage.vue"),
+      },
     ],
   },
 ];
@@ -121,6 +157,16 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   const userStore = useUserStore(pinia);
   const adminStore = useAdminStore(pinia);
+  const deliveryStore = useDeliveryStore(pinia);
+
+  if (to.meta.requiresDelivery) {
+    if (deliveryStore.token && !deliveryStore.profile) {
+      await deliveryStore.bootstrap();
+    }
+    if (!deliveryStore.isLoggedIn) {
+      return { path: "/delivery/login", query: { redirect: to.fullPath } };
+    }
+  }
 
   if (to.meta.requiresUser) {
     if (userStore.token && !userStore.profile) {

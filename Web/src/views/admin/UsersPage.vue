@@ -1,11 +1,16 @@
 <script setup>
 import { onMounted, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import { adminApi } from '../../api'
 
 const rows = ref([])
 
 async function loadData() {
-  rows.value = await adminApi.users()
+  try {
+    rows.value = await adminApi.users()
+  } catch (e) {
+    ElMessage.error('加载用户列表失败: ' + (e.message || '网络错误'))
+  }
 }
 
 onMounted(loadData)
