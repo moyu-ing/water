@@ -1,0 +1,132 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!--[if gte mso 9]><xml><w:WordDocument>
+<w:View>Print</w:View><w:Zoom>100</w:Zoom>
+</w:WordDocument></xml><![endif]-->
+<style>
+@page { size: A4; margin: 2.54cm 3.18cm 2.54cm 3.18cm; }
+body { font-family: '微软雅黑', '宋体', SimSun, sans-serif; font-size: 12pt; line-height: 1.8; color: #333; }
+h1 { font-size: 22pt; text-align: center; color: #0f6cbf; border-bottom: 3px solid #0f6cbf; padding-bottom: 12px; margin-bottom: 24px; }
+h2 { font-size: 16pt; color: #0f6cbf; border-bottom: 1px solid #ddd; padding-bottom: 8px; margin-top: 28px; }
+h3 { font-size: 13pt; color: #0f172a; margin-top: 20px; }
+h4 { font-size: 12pt; color: #333; }
+table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+th, td { border: 1px solid #999; padding: 8px 12px; text-align: left; font-size: 11pt; }
+th { background-color: #0f6cbf; color: white; font-weight: bold; }
+tr:nth-child(even) { background-color: #f0f7ff; }
+p { margin: 8px 0; text-indent: 0; }
+ul, ol { margin: 8px 0 8px 24px; }
+code { background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 10pt; }
+pre { background: #f5f5f5; padding: 12px; border-left: 3px solid #0f6cbf; font-size: 10pt; }
+strong { color: #0f172a; }
+em { color: #666; }
+.doc-title { font-size: 26pt; text-align: center; color: #0f6cbf; font-weight: bold; margin-bottom: 8px; }
+.doc-subtitle { font-size: 14pt; text-align: center; color: #666; margin-bottom: 32px; }
+.doc-info { margin: 0 auto 24px; }
+.doc-info td:first-child { width: 120px; background: #f0f7ff; font-weight: bold; }
+.toc { background: #f8fafc; padding: 16px 24px; border: 1px solid #ddd; margin: 16px 0; }
+.section-break { page-break-before: always; }
+</style>
+</head>
+<body>
+<h1 class="doc-title">项目启动书</h1>
+
+<h2>1. 项目概述</h2>
+<table class="doc-info">
+<tr><td>项目名称</td><td>泉到家 — 桶装水配送商城</td></tr>
+<tr><td>项目类型</td><td>Web全栈电商配送系统</td></tr>
+<tr><td>项目编号</td><td>WD-2026-001</td></tr>
+<tr><td>立项日期</td><td>2026年6月</td></tr>
+<tr><td>预计工期</td><td>6周（含设计+开发+测试+文档）</td></tr>
+</table>
+
+<h2>2. 项目背景</h2>
+<p>传统桶装水配送行业存在以下核心痛点：</p>
+<ul>
+<li><strong>下单方式落后</strong>：多数依赖电话/微信人工下单，效率低下，易出错</li>
+<li><strong>配送调度粗放</strong>：无系统化派单机制，依赖配送员经验，路线不优化</li>
+<li><strong>空桶管理混乱</strong>：桶押金和空桶回收无系统记录，纠纷频发</li>
+<li><strong>缺乏营销工具</strong>：无优惠券、积分等数字化营销手段，用户粘性低</li>
+<li><strong>数据运营缺失</strong>：管理者无法实时掌握销售趋势、库存状态、配送效率</li>
+</ul>
+<p>随着新零售和数字化转型浪潮，桶装水行业亟需一套轻量级、全链路的信息化解决方案。本项目以"泉到家"为品牌概念，打造覆盖用户下单、管理调度、配送履约、营销促活全流程的桶装水配送商城。</p>
+
+<h2>3. 项目目标</h2>
+<h3>3.1 业务目标</h3>
+<ol>
+<li><strong>用户端</strong>：提供流畅的商品浏览、购物车、下单、优惠券、积分一体化的购买体验</li>
+<li><strong>管理端</strong>：实现商品管理、订单处理、配送调度、营销配置、数据看板的集中管控</li>
+<li><strong>配送端</strong>：为配送员提供任务接收、状态流转、签收确认、空桶回收的移动化工具</li>
+<li><strong>空桶闭环</strong>：建立桶押金预收→配送→回收→扣减的完整业务闭环</li>
+</ol>
+
+<h3>3.2 技术目标</h3>
+<ol>
+<li>采用前后端分离架构，RESTful API 设计</li>
+<li>实现完整的 RBAC 权限体系（用户-角色-菜单三级控制）</li>
+<li>JWT 无状态认证，支持三类用户（普通用户/管理员/配送员）</li>
+<li>响应式 UI 设计，兼容 PC 及移动设备</li>
+</ol>
+
+<h2>4. 项目范围</h2>
+<h3>4.1 范围内（In Scope）</h3>
+<table>
+<tr><th>模块</th><th>功能点</th></tr>
+<tr><td>用户商城</td><td>注册登录、商品浏览、分类筛选、购物车、下单（含桶押金计算）、订单列表、个人中心、地址管理</td></tr>
+<tr><td>管理后台</td><td>数据看板、用户管理、商品管理（含图片上传）、分类管理、订单管理、配送人员/任务管理、优惠券模板管理及分发、RBAC权限管理</td></tr>
+<tr><td>配送员端</td><td>配送员登录、任务列表、取件/配送/签收状态流转、空桶回收记录</td></tr>
+<tr><td>营销系统</td><td>优惠券模板CRUD、用户领券、下单使用、积分赚取（消费返积分）、积分抵扣（100分=1元）</td></tr>
+<tr><td>基础设施</td><td>文件上传、JWT认证（三类用户）、全局异常处理、API文档（Knife4j）</td></tr>
+</table>
+
+<h3>4.2 范围外</h3>
+<ul><li>微信支付/支付宝在线支付（当前仅货到付款）</li><li>微信小程序</li><li>短信/公众号消息推送</li><li>第三方地图导航集成</li><li>Redis缓存层</li><li>分布式部署</li></ul>
+
+<h2>5. 技术选型</h2>
+<table>
+<tr><th>层级</th><th>技术</th><th>版本</th><th>选型理由</th></tr>
+<tr><td>后端框架</td><td>Spring Boot</td><td>3.2.5</td><td>生态成熟，自动配置</td></tr>
+<tr><td>ORM</td><td>MyBatis-Plus</td><td>3.5.6</td><td>Lambda查询、代码简洁</td></tr>
+<tr><td>数据库</td><td>MySQL</td><td>8.0</td><td>关系型，事务支持</td></tr>
+<tr><td>安全认证</td><td>JJWT + BCrypt</td><td>0.12.5</td><td>无状态JWT</td></tr>
+<tr><td>API文档</td><td>Knife4j</td><td>4.5.0</td><td>兼容OpenAPI3</td></tr>
+<tr><td>前端框架</td><td>Vue</td><td>3.5.32</td><td>响应式，生态丰富</td></tr>
+<tr><td>构建工具</td><td>Vite</td><td>8.0.4</td><td>快速HMR</td></tr>
+<tr><td>UI组件</td><td>Element Plus</td><td>2.11.4</td><td>Vue3最佳实践</td></tr>
+<tr><td>状态管理</td><td>Pinia</td><td>3.0.3</td><td>轻量类型安全</td></tr>
+<tr><td>图表</td><td>ECharts</td><td>最新</td><td>可视化能力强</td></tr>
+</table>
+
+<h2>6. 里程碑计划</h2>
+<table>
+<tr><th>里程碑</th><th>内容</th><th>预计时间</th></tr>
+<tr><td>M1 - 基础搭建</td><td>项目初始化、数据库设计、基础框架搭建</td><td>第1周</td></tr>
+<tr><td>M2 - 核心功能</td><td>用户商城、管理后台（CRUD+RBAC）</td><td>第2-3周</td></tr>
+<tr><td>M3 - 扩展功能</td><td>文件上传、数据看板、配送模块、空桶回收</td><td>第4周</td></tr>
+<tr><td>M4 - 营销系统</td><td>优惠券、积分系统、下单流程集成</td><td>第5周</td></tr>
+<tr><td>M5 - 测试交付</td><td>功能测试、Bug修复、文档输出</td><td>第6周</td></tr>
+</table>
+
+<h2>7. 风险评估</h2>
+<table>
+<tr><th>风险</th><th>影响</th><th>概率</th><th>应对策略</th></tr>
+<tr><td>需求变更</td><td>高</td><td>中</td><td>敏捷迭代，预留20%缓冲时间</td></tr>
+<tr><td>JWT三类用户技术难点</td><td>中</td><td>低</td><td>已在拦截器层做充分设计</td></tr>
+<tr><td>第三方服务依赖</td><td>低</td><td>低</td><td>图片本地存储，不依赖外部</td></tr>
+</table>
+
+<h2>8. 验收标准</h2>
+<ol>
+<li><strong>功能完整性</strong>：所有范围内功能均可正常使用，无阻断性Bug</li>
+<li><strong>性能要求</strong>：页面首屏加载 &lt; 3秒，API响应 &lt; 500ms</li>
+<li><strong>安全要求</strong>：密码BCrypt加密、JWT过期机制、RBAC权限校验通过</li>
+<li><strong>代码质量</strong>：后端遵循分层架构，前端组件化开发</li>
+<li><strong>文档交付</strong>：12份完整项目文档</li>
+</ol>
+
+</body>
+</html>
