@@ -1,0 +1,625 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
+<style>
+@page { size: A4; margin: 2cm; }
+body { font-family: "Microsoft YaHei", "微软雅黑", SimSun, sans-serif; font-size: 12pt; line-height: 1.8; color: #333; }
+h1 { font-size: 20pt; color: #1a6fb5; text-align: center; border-bottom: 3px solid #1a6fb5; padding-bottom: 12px; margin-bottom: 24px; }
+h2 { font-size: 16pt; color: #1a6fb5; border-bottom: 1px solid #b0d4f1; padding-bottom: 6px; margin-top: 28px; margin-bottom: 14px; }
+h3 { font-size: 13pt; color: #2d8fd5; margin-top: 20px; margin-bottom: 10px; }
+p { margin: 8px 0; text-indent: 0; }
+ul, ol { margin: 6px 0 6px 20px; }
+li { margin: 4px 0; }
+code { background: #f4f4f4; padding: 1px 5px; font-family: Consolas, "Courier New", monospace; font-size: 10pt; border: 1px solid #ddd; border-radius: 3px; }
+pre { background: #f8f8f8; border: 1px solid #ddd; padding: 10px 14px; font-family: Consolas, "Courier New", monospace; font-size: 9.5pt; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
+table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+th { background: #1a6fb5; color: white; padding: 8px 12px; text-align: left; font-weight: bold; }
+td { border: 1px solid #ccc; padding: 6px 12px; }
+tr:nth-child(even) td { background: #f5f9fd; }
+strong { color: #1a6fb5; }
+.highlight-box { background: #e8f4fd; border-left: 4px solid #1a6fb5; padding: 10px 16px; margin: 12px 0; }
+.separator { border: none; border-top: 1px dashed #ccc; margin: 24px 0; }
+.toc { background: #f8fbff; border: 1px solid #b0d4f1; padding: 16px 24px; margin: 16px 0; }
+.toc a { color: #1a6fb5; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<h1>泉到家 — 项目功能亮点与实现详解</h1>
+
+<div class="toc">
+<h3 style="margin-top:0;">📑 目录</h3>
+<ol>
+<li><a href="#s1">JWT 多角色认证 + RBAC 权限体系</a></li>
+<li><a href="#s2">订单全生命周期与空桶回收体系</a></li>
+<li><a href="#s3">订单金额计算引擎</a></li>
+<li><a href="#s4">优惠券营销系统</a></li>
+<li><a href="#s5">积分经济系统</a></li>
+<li><a href="#s6">管理后台数据看板</a></li>
+<li><a href="#s7">配送调度系统</a></li>
+<li><a href="#s8">文件上传系统</a></li>
+<li><a href="#s9">响应式价格计算的前端体验</a></li>
+<li><a href="#s10">三层布局 + 权限过滤的后台侧边栏</a></li>
+<li><a href="#s11">总结</a></li>
+</ol>
+</div>
+
+<div class="highlight-box">
+<strong>项目概要：</strong>泉到家是一个基于 Spring Boot 3 + Vue 3 的全栈桶装水配送电商系统，覆盖<strong>用户商城、管理后台、配送员端</strong>三个端，完整闭环 "浏览→下单→调度→配送→签收" 的业务链路，并深度结合桶装水行业的<strong>空桶回收</strong>和<strong>桶押金</strong>机制。
+</div>
+
+<table>
+<tr><th>技术栈</th><th>说明</th></tr>
+<tr><td>后端框架</td><td>Spring Boot 3.2.5</td></tr>
+<tr><td>ORM</td><td>MyBatis-Plus 3.5.6</td></tr>
+<tr><td>数据库</td><td>MySQL 8.0</td></tr>
+<tr><td>安全认证</td><td>JJWT 0.12.5 + BCrypt</td></tr>
+<tr><td>API 文档</td><td>Knife4j 4.5.0 (OpenAPI 3)</td></tr>
+<tr><td>前端框架</td><td>Vue 3.5 + Vite 8</td></tr>
+<tr><td>UI 组件库</td><td>Element Plus 2.11</td></tr>
+<tr><td>状态管理</td><td>Pinia 3.0</td></tr>
+<tr><td>图表</td><td>ECharts + vue-echarts</td></tr>
+</table>
+
+<hr class="separator">
+
+<h2 id="s1">一、JWT 多角色认证 + RBAC 权限体系</h2>
+
+<h3>功能亮点</h3>
+<p>系统天然支持三种角色（用户 / 管理员 / 配送员），每种角色有独立的 JWT Token 类型和 API 前缀隔离，管理员还进一步有细粒度的 RBAC 菜单权限控制。整个认证链路从 Token 签发 → 拦截器校验 → ThreadLocal 上下文传递 → 接口权限注解形成闭环。</p>
+
+<h3>实现方式</h3>
+
+<h3>后端 — Token 类型隔离（JwtUtil.java）</h3>
+<p>三种角色的 Token 在 JWT Payload 中打上不同的 <code>type</code> 声明：</p>
+<pre>
+// 用户 Token
+claims.put("type", "USER");
+claims.put("userId", userId);
+claims.put("username", username);
+
+// 管理员 Token（额外嵌入权限列表）
+claims.put("type", "ADMIN");
+claims.put("adminId", adminId);
+claims.put("permissions", permissions);  // 完整 List&lt;String&gt; 打入 JWT
+
+// 配送员 Token
+claims.put("type", "DELIVERY_STAFF");
+claims.put("staffId", staffId);
+</pre>
+
+<h3>后端 — 拦截器路由守卫（AuthInterceptor.java）</h3>
+<p><code>preHandle()</code> 方法中执行三级校验：</p>
+<ol>
+<li><strong>白名单放行</strong>：<code>/api/public/**</code>、登录/注册接口、Swagger 文档、静态资源</li>
+<li><strong>Token 解析与类型匹配</strong>：从 <code>Authorization: Bearer &lt;token&gt;</code> 提取 JWT 并验证签名。然后检查 URI 前缀与 Token 类型是否匹配——<code>/api/user/**</code> 要求 <code>type=USER</code>，<code>/api/admin/**</code> 要求 <code>type=ADMIN</code>，<code>/api/delivery/**</code> 要求 <code>type=DELIVERY_STAFF</code></li>
+<li><strong>权限注解检查</strong>（仅管理员）：扫描控制器方法上的 <code>@RequirePermission("product:view")</code> 注解，与 Token 中嵌入的权限集合比对。若无此权限码，直接返回 "没有操作权限" 错误</li>
+</ol>
+
+<h3>后端 — ThreadLocal 上下文传递（CurrentContext.java）</h3>
+<p>用 <code>ThreadLocal</code> 存储当前请求的用户身份，整个请求链路（拦截器 → 控制器 → 服务层）随时可以通过静态方法获取当前用户 ID，无需层层传参：</p>
+<pre>
+public class CurrentContext {
+    private static final ThreadLocal&lt;TokenPayload&gt; CONTEXT = new ThreadLocal<>();
+
+    public static Long getUserId() {
+        TokenPayload payload = CONTEXT.get();
+        return payload != null ? payload.getUserId() : null;
+    }
+    // ... getAdminId(), getStaffId(), getPermissions()
+}
+</pre>
+<p>拦截器在 <code>afterCompletion()</code> 中调用 <code>CurrentContext.clear()</code> 防止内存泄漏。</p>
+
+<h3>后端 — RBAC 权限模型</h3>
+<p>三级权限链路：<code>AdminUser → AdminRole → AdminMenu.permissionCode</code></p>
+<p>登录时，<code>PermissionService.getPermissionsByAdminId()</code> 执行完整链路查询：</p>
+<pre>
+admin_user_role（查角色） → admin_role_menu（查菜单） → admin_menu.permissionCode（权限码集合）
+</pre>
+<p>权限码集合直接打入 JWT，运行时拦截器从 JWT 中提取比对，无需每次查库。</p>
+
+<h3>前端 — 三层路由守卫</h3>
+<p><code>router/index.js</code> 的全局 <code>beforeEach</code> 守卫分三级判断：</p>
+<ul>
+<li><code>requiresUser</code> → 检查 <code>userStore</code>，无 token 跳转 <code>/login</code></li>
+<li><code>requiresAdmin</code> → 检查 <code>adminStore</code>，无 token 跳转 <code>/admin/login</code>；有 token 但缺少路由所需的 <code>permission</code> 则提示 "无权访问" 并重定向到仪表盘</li>
+<li><code>requiresDelivery</code> → 检查 <code>deliveryStore</code>，无 token 跳转 <code>/delivery/login</code></li>
+</ul>
+<p>Token 存储在三个独立的 <code>localStorage</code> key（<code>user_token / admin_token / delivery_token</code>），前端 <code>http.js</code> 根据 API 调用传入的 <code>area</code> 参数选择对应 Token 附加到请求头。</p>
+
+<hr class="separator">
+
+<h2 id="s2">二、订单全生命周期与空桶回收体系</h2>
+
+<h3>功能亮点</h3>
+<p>这是项目最核心的业务特色——不是简单的下单-支付-发货，而是深度融合了桶装水行业的<strong>桶押金</strong>和<strong>空桶回收</strong>机制。每个商品可标记"是否含桶"并设置押金金额，下单时自动累加押金，配送签收时记录回收空桶数并扣减用户持有量，形成完整闭环。</p>
+
+<h3>实现方式</h3>
+
+<h3>数据模型设计</h3>
+<p><code>Product</code> 表有关键字段：</p>
+<pre>
+barrelDeposit  DECIMAL   -- 桶押金金额（null/0 表示不含桶）
+isBarrel       INT       -- 1=含桶商品
+</pre>
+
+<p><code>CustomerOrder</code> 表有完整的押金和回收字段：</p>
+<pre>
+barrelDepositAmount   DECIMAL  -- 订单总押金
+barrelReturnCount     INT      -- 本次回收空桶数
+barrelReturnDeduct    DECIMAL  -- 空桶退款金额（预留字段）
+</pre>
+
+<p><code>AppUser</code> 表维护用户当前持有的空桶数：</p>
+<pre>
+barrelCount  INT  -- 当前持有空桶数量（下单+，回收-）
+</pre>
+
+<p><code>DeliveryTask</code> 表记录回收信息：</p>
+<pre>
+barrelReturned  INT  -- 本次配送回收的空桶数
+</pre>
+
+<h3>下单时自动计算押金（UserMallService.createOrder()）</h3>
+<pre>
+// 遍历购物车中所有已勾选商品
+BigDecimal totalBarrelDeposit = BigDecimal.ZERO;
+int barrelCount = 0;
+for (CartItem item : checkedItems) {
+    Product product = productMapper.selectById(item.getProductId());
+    if (product.getIsBarrel() == 1 && product.getBarrelDeposit() != null) {
+        totalBarrelDeposit = totalBarrelDeposit.add(
+            product.getBarrelDeposit().multiply(BigDecimal.valueOf(item.getQuantity()))
+        );
+        barrelCount += item.getQuantity();
+    }
+}
+// 写入订单
+order.setBarrelDepositAmount(totalBarrelDeposit);
+order.setTotalAmount(商品总额 + 桶押金总额 - 优惠券折扣 - 积分抵扣);
+// 下单后用户桶持有量 +N
+user.setBarrelCount(user.getBarrelCount() + barrelCount);
+</pre>
+
+<h3>配送签收时回收空桶（DeliveryService.completeTask()）</h3>
+<pre>
+task.setStatus("COMPLETED");
+task.setBarrelReturned(request.getBarrelReturned());  // 配送员输入的回收数
+
+// 扣减用户持有量
+AppUser user = appUserMapper.selectById(order.getUserId());
+user.setBarrelCount(user.getBarrelCount() - request.getBarrelReturned());
+appUserMapper.updateById(user);
+</pre>
+
+<hr class="separator">
+
+<h2 id="s3">三、订单金额计算引擎</h2>
+
+<h3>功能亮点</h3>
+<p>下单时的金额计算是一套多因素叠加的计算链：<strong>商品总额 + 桶押金 - 优惠券折扣 - 积分抵扣 = 实付金额</strong>。各环节有严格的顺序依赖和上限约束，前后端独立实现但逻辑完全一致。</p>
+
+<h3>实现方式</h3>
+
+<p>在 <code>UserMallService.createOrder()</code> 中按以下顺序计算，整个过程在 <code>@Transactional</code> 事务保护下原子执行：</p>
+
+<pre>
+第1步：商品总额 = Σ(商品单价 × 数量)
+第2步：桶押金总额 = Σ(含桶商品押金 × 数量)
+第3步：小计 = 商品总额 + 桶押金总额
+第4步：优惠券折扣 = couponService.validateAndUseCoupon(小计, 优惠券ID)
+        ├─ 满减券（FULL_REDUCTION）：直接减固定金额
+        ├─ 折扣券（DISCOUNT）：折扣额 = 小计 × (discountValue / 100)
+        └─ 约束：折扣额不能超过小计本身
+第5步：剩余金额 = 小计 - 优惠券折扣
+第6步：积分抵扣 = min(用户输入积分数 / 100, 剩余金额)
+        └─ 100积分 = 1元，向下取整
+第7步：实付金额 = max(0, 剩余金额 - 积分抵扣)
+</pre>
+
+<p><strong>关键约束：</strong>优惠券先于积分抵扣，确保优惠券的折扣基准值不包含积分抵扣的部分；所有折扣总额不能使订单金额变为负数。</p>
+
+<hr class="separator">
+
+<h2 id="s4">四、优惠券营销系统</h2>
+
+<h3>功能亮点</h3>
+<p>支持<strong>满减券</strong>和<strong>折扣券</strong>两种类型，覆盖 "模板创建 → 批量分发 → 用户领取 → 下单使用 → 过期回收" 的完整生命周期。管理员可以指定用户 ID 批量分发优惠券，用户也可以主动在商城领取。</p>
+
+<h3>实现方式</h3>
+
+<h3>两张表分层设计</h3>
+<p><code>CouponTemplate</code>（优惠券模板）— 定义优惠规则：</p>
+<pre>
+type              VARCHAR  -- FULL_REDUCTION（满减）或 DISCOUNT（折扣）
+discountValue     DECIMAL  -- 满减金额 或 折扣百分比
+minAmount         DECIMAL  -- 最低消费门槛
+totalQuantity     INT      -- 总发行量（null = 不限量）
+receivedQuantity  INT      -- 已领取数量
+validDays         INT      -- 有效天数（从领取日起算）
+</pre>
+
+<p><code>UserCoupon</code>（用户持有的优惠券实例）— 记录持有和使用状态：</p>
+<pre>
+status      VARCHAR       -- UNUSED / USED / EXPIRED
+receiveTime DATETIME      -- 领取时间
+expireTime  DATETIME      -- 过期时间 = 领取时间 + validDays
+useTime     DATETIME      -- 使用时间
+orderId     BIGINT        -- 使用的订单ID
+</pre>
+
+<h3>过期自动检测 — 惰性检查策略</h3>
+<p>不做定时任务轮询，而是在用户查询优惠券列表时<strong>惰性检查</strong>——如果状态是 UNUSED 但当前时间已超过 <code>expireTime</code>，当场更新为 EXPIRED：</p>
+<pre>
+for (UserCoupon uc : userCoupons) {
+    if ("UNUSED".equals(uc.getStatus())
+            && uc.getExpireTime() != null
+            && uc.getExpireTime().isBefore(LocalDateTime.now())) {
+        uc.setStatus("EXPIRED");
+        userCouponMapper.updateById(uc);  // 持久化
+    }
+}
+</pre>
+
+<h3>下单时原子核销</h3>
+<p><code>CouponService.validateAndUseCoupon()</code> 在订单创建事务中完成校验+核销：</p>
+<ol>
+<li>校验优惠券属于当前用户</li>
+<li>校验状态必须是 UNUSED</li>
+<li>校验未过期</li>
+<li>校验订单金额 ≥ <code>minAmount</code>（满减门槛）</li>
+<li>计算折扣金额</li>
+<li>标记为 USED，记录 <code>useTime</code> 和 <code>orderId</code></li>
+</ol>
+
+<h3>管理员批量分发</h3>
+<pre>
+public void distribute(Long templateId, List&lt;Long&gt; userIds) {
+    CouponTemplate template = couponTemplateMapper.selectById(templateId);
+    // 库存检查
+    if (template.getTotalQuantity() != null
+            && template.getReceivedQuantity() + userIds.size() > template.getTotalQuantity()) {
+        throw new BizException("优惠券库存不足");
+    }
+    // 逐用户创建 UserCoupon，计算过期时间
+    for (Long userId : userIds) {
+        UserCoupon uc = new UserCoupon();
+        uc.setUserId(userId);
+        uc.setExpireTime(LocalDateTime.now().plusDays(template.getValidDays()));
+        // ... 插入记录
+    }
+    // 更新已领取计数
+    template.setReceivedQuantity(template.getReceivedQuantity() + userIds.size());
+}
+</pre>
+
+<hr class="separator">
+
+<h2 id="s5">五、积分经济系统</h2>
+
+<h3>功能亮点</h3>
+<p>积分形成 "消费→赚取→抵扣→消费" 的闭环经济体系：<strong>消费1元得1积分，100积分抵1元</strong>。每一笔积分变动都有流水记录可追溯，余额快照 + 明细流水双表设计兼顾查询性能和审计需求。</p>
+
+<h3>实现方式</h3>
+
+<h3>双表设计</h3>
+<ul>
+<li><code>AppUser.points</code>：积分余额<strong>快照</strong>（冗余设计，避免每次 SUM 明细表）</li>
+<li><code>UserPoints</code>：积分<strong>流水明细</strong>（正数=赚取，负数=消耗），含 <code>source</code>（ORDER/EXCHANGE）、<code>sourceDesc</code>、<code>expireTime</code></li>
+</ul>
+
+<h3>赚取积分 — 订单完成时触发</h3>
+<p>在 <code>AdminService.updateOrderStatus()</code> 和 <code>DeliveryService.completeTask()</code> 中，当订单状态变为 COMPLETED 时：</p>
+<pre>
+if ("COMPLETED".equals(status)) {
+    int earnedPoints = order.getTotalAmount().intValue();  // 1元 = 1积分
+    pointsService.earnPoints(order.getUserId(), earnedPoints,
+        "ORDER", "订单#" + order.getOrderNo() + " 获得积分");
+}
+</pre>
+
+<h3>抵扣积分 — 下单时消耗</h3>
+<pre>
+public void deductPoints(Long userId, int points, String desc) {
+    AppUser user = appUserMapper.selectById(userId);
+    if (user.getPoints() < points) {
+        throw new BizException("积分不足");
+    }
+    // 插入负分流水（审计）
+    UserPoints record = new UserPoints();
+    record.setPoints(-points);
+    record.setSource("EXCHANGE");
+    record.setSourceDesc(desc);
+    userPointsMapper.insert(record);
+    // 更新余额快照
+    user.setPoints(user.getPoints() - points);
+    appUserMapper.updateById(user);
+}
+</pre>
+
+<h3>兑换率固定</h3>
+<pre>
+public static BigDecimal pointsToAmount(int points) {
+    return BigDecimal.valueOf(points / 100);  // 100积分 = 1元，向下取整
+}
+</pre>
+
+<hr class="separator">
+
+<h2 id="s6">六、管理后台数据看板</h2>
+
+<h3>功能亮点</h3>
+<p>管理后台首页提供实时运营数据概览，包含<strong>统计卡片 + ECharts 图表 + 库存预警</strong>，让管理员一眼掌握全局运营状态。所有数据在一次 API 调用中聚合返回。</p>
+
+<h3>实现方式</h3>
+
+<h3>后端聚合查询（AdminService.getStatistics()）</h3>
+<p>单次 API 调用完成所有统计聚合：</p>
+<pre>
+Map&lt;String, Object&gt; stats = new HashMap&lt;&gt;();
+
+// 1. 四个总数统计
+stats.put("totalUsers", appUserMapper.selectCount(null));
+stats.put("totalProducts", productMapper.selectCount(null));
+stats.put("totalCategories", categoryMapper.selectCount(null));
+stats.put("totalOrders", customerOrderMapper.selectCount(null));
+
+// 2. 今日统计（带日期条件）
+stats.put("todayOrders", customerOrderMapper.selectCount(
+    new LambdaQueryWrapper&lt;&gt;().ge(CustomerOrder::getCreateTime, LocalDate.now())));
+
+// 3. 订单状态分布（按 status 分组 COUNT）
+for (String status : ["PENDING_CONFIRM", "TO_DELIVER", "COMPLETED", "CANCELLED"]) {
+    statusDistribution.put(status,
+        customerOrderMapper.selectCount(
+            new LambdaQueryWrapper&lt;&gt;().eq(CustomerOrder::getStatus, status)));
+}
+
+// 4. 库存预警（stock &lt; 10 且状态为上架）
+List&lt;Product&gt; lowStock = productMapper.selectList(
+    new LambdaQueryWrapper&lt;&gt;()
+        .lt(Product::getStock, 10)
+        .eq(Product::getStatus, 1));
+
+// 5. 7天订单趋势（逐日 COUNT）
+// 6. TOP5 分类商品数量排行
+</pre>
+
+<h3>前端图表渲染（DashboardPage.vue + vue-echarts）</h3>
+<table>
+<tr><th>图表类型</th><th>数据</th><th>ECharts 配置要点</th></tr>
+<tr><td>折线图（Line）</td><td>7天订单趋势</td><td><code>smooth: true</code> 平滑曲线，<code>xAxis.data</code> 为日期数组</td></tr>
+<tr><td>环形图（Donut）</td><td>订单状态分布</td><td><code>type: 'pie'</code>，<code>radius: ['40%', '70%']</code>，四状态不同颜色</td></tr>
+<tr><td>饼图（Pie）</td><td>TOP5 分类占比</td><td><code>type: 'pie'</code>，开启标签和百分比显示</td></tr>
+<tr><td>表格（Table）</td><td>低库存预警</td><td><code>el-table</code> 展示 stock &lt; 10 的商品，高亮警告行</td></tr>
+</table>
+
+<hr class="separator">
+
+<h2 id="s7">七、配送调度系统</h2>
+
+<h3>功能亮点</h3>
+<p>配送员的完整工作流：<strong>管理员分配任务 → 配送员确认取件 → 开始配送 → 完成签收（记录回收空桶）</strong>。配送任务状态和订单状态联动更新，状态流转由严格的状态机控制。</p>
+
+<h3>实现方式</h3>
+
+<h3>任务状态机</h3>
+<pre>
+ASSIGNED（已分配）→ PICKED_UP（已取件）→ DELIVERING（配送中）→ COMPLETED（已完成）
+</pre>
+
+<h3>管理员分配任务（DeliveryService.assignTask()）</h3>
+<p>在事务中原子完成：</p>
+<pre>
+@Transactional
+public void assignTask(DeliveryTaskRequest request) {
+    // 1. 校验订单和配送员存在
+    CustomerOrder order = customerOrderMapper.selectById(request.getOrderId());
+    DeliveryStaff staff = deliveryStaffMapper.selectById(request.getStaffId());
+
+    // 2. 防重复分配
+    Long count = deliveryTaskMapper.selectCount(
+        new LambdaQueryWrapper&lt;&gt;().eq(DeliveryTask::getOrderId, request.getOrderId()));
+    if (count > 0) throw new BizException("该订单已分配配送任务");
+
+    // 3. 创建任务（状态=ASSIGNED）
+    DeliveryTask task = new DeliveryTask();
+    // ... 设置字段
+    deliveryTaskMapper.insert(task);
+
+    // 4. 联动更新订单状态 → TO_DELIVER
+    order.setStatus("TO_DELIVER");
+    customerOrderMapper.updateById(order);
+}
+</pre>
+
+<h3>配送员端状态流转（前端 DeliveryTasksPage.vue）</h3>
+<p>根据任务当前状态动态显示可操作按钮：</p>
+<pre>
+ASSIGNED   → 显示 [确认取件] 按钮 → 调用 updateTaskStatus(PICKED_UP)
+PICKED_UP  → 显示 [开始配送] 按钮 → 调用 updateTaskStatus(DELIVERING)
+DELIVERING → 显示 [完成签收] 按钮 → 弹出对话框输入回收空桶数 → 调用 completeTask()
+COMPLETED  → 无操作按钮（只读展示）
+</pre>
+
+<h3>完成签收的后端联动（DeliveryService.completeTask()）</h3>
+<pre>
+任务 COMPLETED  →  订单 COMPLETED  →  用户空桶持有量 -= 回收数  →  发放积分
+</pre>
+
+<hr class="separator">
+
+<h2 id="s8">八、文件上传系统</h2>
+
+<h3>功能亮点</h3>
+<p>支持管理员在商品和分类管理页面上传图片，具备<strong>格式白名单安全校验、UUID 防冲突命名、日期分区存储</strong>三重保障，上传接口受 RBAC 权限保护。</p>
+
+<h3>实现方式</h3>
+
+<pre>
+@PostMapping("/api/admin/upload")
+@RequirePermission("product:edit")
+public ApiResponse&lt;List&lt;String&gt;&gt; upload(@RequestParam("file") MultipartFile[] files) {
+    List&lt;String&gt; urls = new ArrayList&lt;&gt;();
+
+    // 1. 日期分区目录：uploads/2026/06/22/
+    String dateDir = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
+    File uploadDir = new File("./uploads/" + dateDir);
+    if (!uploadDir.exists()) uploadDir.mkdirs();
+
+    for (MultipartFile file : files) {
+        // 2. 安全校验：仅允许图片格式
+        String ext = FilenameUtils.getExtension(file.getOriginalFilename()).toLowerCase();
+        if (!Arrays.asList("jpg","jpeg","png","gif","webp").contains(ext)) {
+            throw new BizException("仅支持 JPG/PNG/GIF/WebP 格式");
+        }
+        // 3. UUID 命名防冲突
+        String filename = UUID.randomUUID().toString() + "." + ext;
+        file.transferTo(new File(uploadDir, filename));
+        urls.add("/uploads/" + dateDir + "/" + filename);
+    }
+    return ApiResponse.success(urls);
+}
+</pre>
+
+<p>静态文件通过 <code>WebMvcConfig</code> 映射 <code>/uploads/**</code> 到本地 <code>./uploads/</code> 目录直接对外提供访问。</p>
+
+<p>前端封装了独立的 <code>uploadFile()</code> 函数，直接用原生 Axios 发 <code>multipart/form-data</code> 请求，手动从 <code>localStorage</code> 取 admin token 附加到请求头。</p>
+
+<hr class="separator">
+
+<h2 id="s9">九、响应式价格计算的前端体验</h2>
+
+<h3>功能亮点</h3>
+<p>购物车页面实现了<strong>实时响应式价格计算</strong>——用户勾选商品、切换优惠券、调整积分数量时，所有价格数字实时变化，体验零延迟。整个计算链路完全由 Vue 3 的 <code>computed</code> 响应式系统驱动。</p>
+
+<h3>实现方式</h3>
+
+<p>完全依赖 Vue 3 的 <code>computed</code> 构建<strong>单向数据流计算链</strong>，不使用任何 <code>watch</code> 或手动更新：</p>
+
+<pre>
+// 数据流：用户操作 → ref 更新 → computed 自动传播 → 模板渲染
+
+const checkedItems = computed(() =>                     // ← cartItems + checked
+    cartItems.value.filter(item => item.checked));
+
+const totalAmount = computed(() =>                      // ← checkedItems
+    checkedItems.value.reduce((s, i) => s + i.price * i.quantity, 0));
+
+const barrelDepositTotal = computed(() =>               // ← checkedItems
+    checkedItems.value.reduce((s, i) => s + (i.barrelDeposit || 0) * i.quantity, 0));
+
+const grandTotal = computed(() =>                       // ← totalAmount + barrelDepositTotal
+    totalAmount.value + barrelDepositTotal.value);
+
+const couponDiscountAmount = computed(() => {           // ← selectedCoupon + grandTotal
+    if (!selectedCoupon.value) return 0;
+    if (selectedCoupon.value.type === 'FULL_REDUCTION')
+        return selectedCoupon.value.discountValue;      // 满减：减固定金额
+    return grandTotal.value * selectedCoupon.value.discountValue / 100;  // 折扣：百分比
+});
+
+const pointsDiscountAmount = computed(() =>             // ← usePoints + grandTotal
+    Math.min(usePoints.value / 100, grandTotal.value - couponDiscountAmount.value));
+
+const finalTotal = computed(() =>                       // ← 以上所有值的终点
+    Math.max(0, grandTotal.value - couponDiscountAmount.value - pointsDiscountAmount.value));
+</pre>
+
+<p>用户改动任何一个输入（勾选商品、选优惠券、输入积分数量），Vue 的响应式系统自动沿依赖链传播，所有中间值和最终值瞬间重算，模板自动更新。<strong>无需手动调用任何更新函数</strong>。</p>
+
+<hr class="separator">
+
+<h2 id="s10">十、三层布局 + 权限过滤的后台侧边栏</h2>
+
+<h3>功能亮点</h3>
+<p>管理后台的侧边栏菜单不仅是静态路由配置，还会根据当前管理员的 RBAC 权限<strong>动态过滤</strong>——无权限的菜单项完全不可见，实现了 "所见即所得" 的权限体验。</p>
+
+<h3>实现方式</h3>
+
+<p>在 <code>AdminLayout.vue</code> 中，菜单配置为带权限标记的数组：</p>
+<pre>
+const menuItems = [
+    { path: '/admin/dashboard', title: '数据看板', permission: 'admin:dashboard' },
+    { path: '/admin/users',     title: '用户管理', permission: 'user:view' },
+    { path: '/admin/products',  title: '商品管理', permission: 'product:view' },
+    { path: '/admin/orders',    title: '订单管理', permission: 'order:view' },
+    // ... 更多菜单项
+];
+
+// 根据管理员权限动态过滤
+const adminStore = useAdminStore();
+const filteredMenu = computed(() =>
+    menuItems.filter(item => adminStore.permissions.includes(item.permission))
+);
+</pre>
+
+<p>模板中只渲染 <code>filteredMenu</code>，实现了<strong>菜单可见性 = 权限</strong>的直观效果。配合路由守卫的二次校验（防止直接输入 URL 绕过），形成前后端双重权限保护。</p>
+
+<hr class="separator">
+
+<h2 id="s11">总结</h2>
+
+<table>
+<tr><th width="5%">序号</th><th width="35%">功能亮点</th><th width="60%">核心技术实现</th></tr>
+<tr>
+<td>1</td>
+<td><strong>JWT 多角色 + RBAC 权限</strong></td>
+<td>Token type 字段隔离三种角色、ThreadLocal 上下文传递、<code>@RequirePermission</code> 注解 + 拦截器运行时检查、前端三层路由守卫、localStorage 三 key 存储</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>空桶回收闭环</strong></td>
+<td>商品含桶标记 + 押金字段、下单自动累加押金并增加用户桶持有量、配送签收回收扣减持有量、前后端状态联动</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>多层价格计算引擎</strong></td>
+<td>后端事务中按序计算：商品价 + 押金 - 优惠券 - 积分 = 实付；前端 Vue computed 链式响应实时预览，前后端逻辑独立但一致</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>优惠券全生命周期</strong></td>
+<td>模板-实例两张表分层、满减/折扣双类型、查询时惰性过期检测、事务内原子核销、批量分发 + 用户主动领取双通道</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>积分闭环经济</strong></td>
+<td>余额快照 + 流水明细双表设计、1:100 固定兑换率、订单完成时赚取 + 下单时消耗、每笔变动有审计流水</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>ECharts 数据看板</strong></td>
+<td>后端单次聚合查询返回全部统计、前端折线图 + 环形图 + 饼图三种图表、库存预警表、今日数据实时刷新</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>配送调度状态机</strong></td>
+<td>ASSIGNED→PICKED_UP→DELIVERING→COMPLETED 严格状态机、任务-订单联动更新、防重复分配检查、前端动态按钮</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>安全文件上传</strong></td>
+<td>图片格式白名单校验、UUID 防冲突命名、日期分区存储、<code>@RequirePermission</code> 权限保护、前端独立 Axios 实例上传</td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>前端响应式计算</strong></td>
+<td>Vue 3 computed 单向数据流链，从勾选商品到最终价格 6 层 computed 自动传播，零手动更新、零 watch</td>
+</tr>
+<tr>
+<td>10</td>
+<td><strong>动态权限菜单</strong></td>
+<td>侧边栏根据 JWT 中嵌入的权限集合实时过滤、路由守卫二次校验防 URL 绕过、菜单可见性即权限</td>
+</tr>
+</table>
+
+<p style="text-align:center; color:#999; margin-top:40px;">
+— 文档生成日期：2026年6月22日 —
+</p>
+
+</body>
+</html>
