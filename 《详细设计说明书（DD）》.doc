@@ -1,0 +1,147 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!--[if gte mso 9]><xml><w:WordDocument>
+<w:View>Print</w:View><w:Zoom>100</w:Zoom>
+</w:WordDocument></xml><![endif]-->
+<style>
+@page { size: A4; margin: 2.54cm 3.18cm 2.54cm 3.18cm; }
+body { font-family: '微软雅黑', '宋体', SimSun, sans-serif; font-size: 12pt; line-height: 1.8; color: #333; }
+h1 { font-size: 22pt; text-align: center; color: #0f6cbf; border-bottom: 3px solid #0f6cbf; padding-bottom: 12px; margin-bottom: 24px; }
+h2 { font-size: 16pt; color: #0f6cbf; border-bottom: 1px solid #ddd; padding-bottom: 8px; margin-top: 28px; }
+h3 { font-size: 13pt; color: #0f172a; margin-top: 20px; }
+h4 { font-size: 12pt; color: #333; }
+table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+th, td { border: 1px solid #999; padding: 8px 12px; text-align: left; font-size: 11pt; }
+th { background-color: #0f6cbf; color: white; font-weight: bold; }
+tr:nth-child(even) { background-color: #f0f7ff; }
+p { margin: 8px 0; text-indent: 0; }
+ul, ol { margin: 8px 0 8px 24px; }
+code { background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 10pt; }
+pre { background: #f5f5f5; padding: 12px; border-left: 3px solid #0f6cbf; font-size: 10pt; }
+strong { color: #0f172a; }
+em { color: #666; }
+.doc-title { font-size: 26pt; text-align: center; color: #0f6cbf; font-weight: bold; margin-bottom: 8px; }
+.doc-subtitle { font-size: 14pt; text-align: center; color: #666; margin-bottom: 32px; }
+.doc-info { margin: 0 auto 24px; }
+.doc-info td:first-child { width: 120px; background: #f0f7ff; font-weight: bold; }
+.toc { background: #f8fafc; padding: 16px 24px; border: 1px solid #ddd; margin: 16px 0; }
+.section-break { page-break-before: always; }
+</style>
+</head>
+<body>
+<h1 class="doc-title">详细设计说明书（DD）</h1>
+
+<h2>1. AuthInterceptor 认证拦截器</h2>
+<p><strong>类路径</strong>：com.waterdelivery.config.AuthInterceptor</p>
+<p><strong>职责</strong>：拦截所有 /api/** 请求，执行JWT解析和RBAC校验</p>
+
+<h3>preHandle 算法流程：</h3>
+<pre>
+preHandle(request, response, handler):
+  1. 判断是否HandlerMethod → 否则放行
+  2. 获取URI → 白名单检查
+  3. 白名单：/api/public, /error, /doc.html, /swagger,
+            /v3/api-docs, login/register端点 → 直接放行
+  4. 从Header获取 Authorization: Bearer {token}
+  5. token缺失 → 抛 BizException("请先登录")
+  6. JwtUtil.parse(token) → TokenPayload
+  7. 类型校验：
+     /api/user → type == "USER"
+     /api/admin → type == "ADMIN"
+     /api/delivery → type == "DELIVERY_STAFF"
+  8. CurrentContext.set(payload)
+  9. 获取 @RequirePermission 注解 → 校验权限
+  10. 放行
+</pre>
+
+<h2>2. UserMallService.createOrder() 下单核心逻辑</h2>
+<p><strong>注解</strong>：@Transactional(rollbackFor = Exception.class)</p>
+<pre>
+createOrder(userId, request):
+  1. 校验收货地址
+  2. 查询购物车已选中商品(checked=1)
+  3. 批量查商品信息 → productMap
+  4. 遍历已选商品：
+     ├─ 存在且上架？
+     ├─ 库存充足？
+     └─ 累加 total += price × qty
+  5. 计算桶押金：
+     for each isBarrel==1:
+       barrelDepositTotal += deposit × qty
+       barrelCount += qty
+  6. 优惠券抵扣(couponService.validateAndUseCoupon)
+  7. 积分抵扣(pointsService.pointsToAmount)
+  8. finalTotal = max(0, total - couponDiscount - pointsDiscount)
+  9. 生成订单号：WD + yyyyMMddHHmmss + userId
+  10. 构建并插入CustomerOrder
+  11. 标记券已用 + 扣积分 + 更新桶持有数
+  12. 遍历：扣库存 + 插明细 + 清购物车
+  13. 返回订单详情
+</pre>
+
+<h2>3. CouponService.validateAndUseCoupon()</h2>
+<pre>
+validateAndUseCoupon(userCouponId, orderAmount):
+  1. 查UserCoupon → status != "UNUSED" → 抛异常
+  2. 检查过期：expireTime < now → 标记EXPIRED → 抛异常
+  3. 查CouponTemplate
+  4. 检查最低消费：orderAmount < minAmount → 抛异常
+  5. 计算抵扣：
+     FULL_REDUCTION: discount = discountValue
+     DISCOUNT: discount = orderAmount × (discountValue/100)
+  6. 返回 min(discount, orderAmount)
+</pre>
+
+<h2>4. DeliveryService.completeTask() 签收+空桶回收</h2>
+<pre>
+completeTask(taskId, request):
+  @Transactional
+  1. 查DeliveryTask
+  2. task.status = "COMPLETED"
+     task.completeTime = now
+     task.barrelReturned = request.barrelReturned
+  3. 更新关联订单：order.status = "COMPLETED"
+  4. 若 barrelReturned > 0:
+     user.barrelCount = max(0, user.barrelCount - barrelReturned)
+</pre>
+
+<h2>5. 前端Pinia Store模式</h2>
+<pre>
+defineStore('xxx', {
+  state: () => ({
+    token: localStorage.getItem('xxx_token') || '',
+    profile: JSON.parse(localStorage.getItem('xxx_profile') || 'null'),
+  }),
+  getters: {
+    isLoggedIn: (state) => !!state.token,
+  },
+  actions: {
+    async login(credentials) { ... },
+    async bootstrap() { ... },
+    setSession(data) { ... },
+    logout() { ... },
+  },
+})
+</pre>
+
+<h2>6. 前端路由守卫模式</h2>
+<pre>
+router.beforeEach(async (to) => {
+  // 三层守卫：delivery → user → admin
+  if (to.meta.requiresDelivery) {
+    if (!deliveryStore.isLoggedIn)
+      return '/delivery/login'
+  }
+  if (to.meta.requiresUser) { ... }
+  if (to.meta.requiresAdmin) {
+    // 额外校验 meta.permission 是否在权限集合中
+  }
+})
+</pre>
+
+</body>
+</html>

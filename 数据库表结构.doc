@@ -1,0 +1,140 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!--[if gte mso 9]><xml><w:WordDocument>
+<w:View>Print</w:View><w:Zoom>100</w:Zoom>
+</w:WordDocument></xml><![endif]-->
+<style>
+@page { size: A4; margin: 2.54cm 3.18cm 2.54cm 3.18cm; }
+body { font-family: '微软雅黑', '宋体', SimSun, sans-serif; font-size: 12pt; line-height: 1.8; color: #333; }
+h1 { font-size: 22pt; text-align: center; color: #0f6cbf; border-bottom: 3px solid #0f6cbf; padding-bottom: 12px; margin-bottom: 24px; }
+h2 { font-size: 16pt; color: #0f6cbf; border-bottom: 1px solid #ddd; padding-bottom: 8px; margin-top: 28px; }
+h3 { font-size: 13pt; color: #0f172a; margin-top: 20px; }
+h4 { font-size: 12pt; color: #333; }
+table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+th, td { border: 1px solid #999; padding: 8px 12px; text-align: left; font-size: 11pt; }
+th { background-color: #0f6cbf; color: white; font-weight: bold; }
+tr:nth-child(even) { background-color: #f0f7ff; }
+p { margin: 8px 0; text-indent: 0; }
+ul, ol { margin: 8px 0 8px 24px; }
+code { background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 10pt; }
+pre { background: #f5f5f5; padding: 12px; border-left: 3px solid #0f6cbf; font-size: 10pt; }
+strong { color: #0f172a; }
+em { color: #666; }
+.doc-title { font-size: 26pt; text-align: center; color: #0f6cbf; font-weight: bold; margin-bottom: 8px; }
+.doc-subtitle { font-size: 14pt; text-align: center; color: #666; margin-bottom: 32px; }
+.doc-info { margin: 0 auto 24px; }
+.doc-info td:first-child { width: 120px; background: #f0f7ff; font-weight: bold; }
+.toc { background: #f8fafc; padding: 16px 24px; border: 1px solid #ddd; margin: 16px 0; }
+.section-break { page-break-before: always; }
+</style>
+</head>
+<body>
+<h1 class="doc-title">数据库表结构</h1>
+
+<h2>1. ER关系图</h2>
+<pre>
+app_user ──(1:N)── user_address
+app_user ──(1:N)── cart_item ──(N:1)── product ──(N:1)── category
+app_user ──(1:N)── customer_order ──(1:N)── order_item ──(N:1)── product(快照)
+app_user ──(1:N)── user_coupon ──(N:1)── coupon_template
+app_user ──(1:N)── user_points
+
+admin_user ──(N:M)── admin_user_role ──(N:1)── admin_role ──(N:M)── admin_role_menu ──(N:1)── admin_menu
+
+delivery_staff ──(1:N)── delivery_task ──(N:1)── customer_order
+</pre>
+
+<h2>2. 完整表结构（18张表）</h2>
+
+<h3>2.1 app_user（商城用户）</h3>
+<table>
+<tr><th>字段</th><th>类型</th><th>约束</th><th>说明</th></tr>
+<tr><td>id</td><td>BIGINT</td><td>PK, AUTO_INCREMENT</td><td>主键</td></tr>
+<tr><td>username</td><td>VARCHAR(50)</td><td>NOT NULL, UNIQUE</td><td>用户名</td></tr>
+<tr><td>password</td><td>VARCHAR(255)</td><td>NOT NULL</td><td>BCrypt密码</td></tr>
+<tr><td>nickname</td><td>VARCHAR(50)</td><td>NOT NULL</td><td>昵称</td></tr>
+<tr><td>phone</td><td>VARCHAR(20)</td><td>NOT NULL</td><td>手机号</td></tr>
+<tr><td>status</td><td>TINYINT</td><td>DEFAULT 1</td><td>1启用 0禁用</td></tr>
+<tr><td>barrel_count</td><td>INT</td><td>DEFAULT 0</td><td>持有空桶数</td></tr>
+<tr><td>points</td><td>INT</td><td>DEFAULT 0</td><td>可用积分</td></tr>
+</table>
+
+<h3>2.2 product（商品）</h3>
+<table>
+<tr><th>字段</th><th>类型</th><th>说明</th></tr>
+<tr><td>id</td><td>BIGINT PK</td><td>主键</td></tr>
+<tr><td>category_id</td><td>BIGINT</td><td>分类ID</td></tr>
+<tr><td>name</td><td>VARCHAR(100)</td><td>商品名称</td></tr>
+<tr><td>sub_title</td><td>VARCHAR(255)</td><td>副标题</td></tr>
+<tr><td>image</td><td>VARCHAR(255)</td><td>图片URL</td></tr>
+<tr><td>description</td><td>TEXT</td><td>商品描述</td></tr>
+<tr><td>spec</td><td>VARCHAR(100)</td><td>规格</td></tr>
+<tr><td>price</td><td>DECIMAL(10,2)</td><td>单价</td></tr>
+<tr><td>stock</td><td>INT</td><td>库存</td></tr>
+<tr><td>barrel_deposit</td><td>DECIMAL(10,2)</td><td>桶押金（0=不含桶）</td></tr>
+<tr><td>is_barrel</td><td>TINYINT</td><td>1=含桶需收押金</td></tr>
+<tr><td>status</td><td>TINYINT</td><td>1上架 0下架</td></tr>
+</table>
+
+<h3>2.3 customer_order（订单）</h3>
+<table>
+<tr><th>字段</th><th>类型</th><th>说明</th></tr>
+<tr><td>id</td><td>BIGINT PK</td><td>主键</td></tr>
+<tr><td>order_no</td><td>VARCHAR(64) UNIQUE</td><td>订单编号</td></tr>
+<tr><td>user_id</td><td>BIGINT</td><td>用户ID</td></tr>
+<tr><td>total_amount</td><td>DECIMAL(10,2)</td><td>实付总金额</td></tr>
+<tr><td>status</td><td>VARCHAR(32)</td><td>订单状态</td></tr>
+<tr><td>pay_type</td><td>VARCHAR(32)</td><td>支付方式（COD）</td></tr>
+<tr><td>contact_name</td><td>VARCHAR(50)</td><td>收货人</td></tr>
+<tr><td>contact_phone</td><td>VARCHAR(20)</td><td>收货电话</td></tr>
+<tr><td>full_address</td><td>VARCHAR(255)</td><td>完整地址</td></tr>
+<tr><td>barrel_deposit_amount</td><td>DECIMAL(10,2)</td><td>桶押金总额</td></tr>
+<tr><td>barrel_return_count</td><td>INT</td><td>已回收空桶数</td></tr>
+<tr><td>coupon_id</td><td>BIGINT</td><td>使用的优惠券ID</td></tr>
+<tr><td>coupon_discount</td><td>DECIMAL(10,2)</td><td>优惠券抵扣</td></tr>
+<tr><td>points_used</td><td>INT</td><td>使用积分数</td></tr>
+<tr><td>points_discount</td><td>DECIMAL(10,2)</td><td>积分抵扣金额</td></tr>
+<tr><td>points_earned</td><td>INT</td><td>获得积分</td></tr>
+</table>
+
+<h3>2.4 delivery_task（配送任务）</h3>
+<table>
+<tr><th>字段</th><th>类型</th><th>说明</th></tr>
+<tr><td>id</td><td>BIGINT PK</td><td>主键</td></tr>
+<tr><td>order_id</td><td>BIGINT</td><td>关联订单ID</td></tr>
+<tr><td>staff_id</td><td>BIGINT</td><td>配送员ID</td></tr>
+<tr><td>status</td><td>VARCHAR(32)</td><td>ASSIGNED/PICKED_UP/DELIVERING/COMPLETED</td></tr>
+<tr><td>barrel_returned</td><td>INT</td><td>本次回收空桶数</td></tr>
+<tr><td>photo_url</td><td>VARCHAR(255)</td><td>签收照片</td></tr>
+<tr><td>complete_time</td><td>DATETIME</td><td>签收时间</td></tr>
+</table>
+
+<h3>2.5 coupon_template（优惠券模板）</h3>
+<table>
+<tr><th>字段</th><th>类型</th><th>说明</th></tr>
+<tr><td>id</td><td>BIGINT PK</td><td>主键</td></tr>
+<tr><td>name</td><td>VARCHAR(100)</td><td>优惠券名称</td></tr>
+<tr><td>type</td><td>VARCHAR(32)</td><td>FULL_REDUCTION/DISCOUNT</td></tr>
+<tr><td>discount_value</td><td>DECIMAL(10,2)</td><td>满减金额或折扣率</td></tr>
+<tr><td>min_amount</td><td>DECIMAL(10,2)</td><td>最低消费门槛</td></tr>
+<tr><td>total_quantity</td><td>INT</td><td>发行总量</td></tr>
+<tr><td>received_quantity</td><td>INT</td><td>已领取数量</td></tr>
+<tr><td>valid_days</td><td>INT</td><td>有效天数</td></tr>
+</table>
+
+<h2>3. 数据库初始化</h2>
+<p>系统启动时通过 data.sql 初始化以下数据：</p>
+<ul>
+<li>1个超级管理员角色（SUPER_ADMIN）</li>
+<li>1个管理员账号（admin/admin123）</li>
+<li>19个菜单/权限项</li>
+<li>5个商品分类 + 10个商品</li>
+<li>2个样本配送员 + 3个样本优惠券模板</li>
+</ul>
+
+</body>
+</html>

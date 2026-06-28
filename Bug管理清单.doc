@@ -1,0 +1,89 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!--[if gte mso 9]><xml><w:WordDocument>
+<w:View>Print</w:View><w:Zoom>100</w:Zoom>
+</w:WordDocument></xml><![endif]-->
+<style>
+@page { size: A4; margin: 2.54cm 3.18cm 2.54cm 3.18cm; }
+body { font-family: '微软雅黑', '宋体', SimSun, sans-serif; font-size: 12pt; line-height: 1.8; color: #333; }
+h1 { font-size: 22pt; text-align: center; color: #0f6cbf; border-bottom: 3px solid #0f6cbf; padding-bottom: 12px; margin-bottom: 24px; }
+h2 { font-size: 16pt; color: #0f6cbf; border-bottom: 1px solid #ddd; padding-bottom: 8px; margin-top: 28px; }
+h3 { font-size: 13pt; color: #0f172a; margin-top: 20px; }
+h4 { font-size: 12pt; color: #333; }
+table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+th, td { border: 1px solid #999; padding: 8px 12px; text-align: left; font-size: 11pt; }
+th { background-color: #0f6cbf; color: white; font-weight: bold; }
+tr:nth-child(even) { background-color: #f0f7ff; }
+p { margin: 8px 0; text-indent: 0; }
+ul, ol { margin: 8px 0 8px 24px; }
+code { background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 10pt; }
+pre { background: #f5f5f5; padding: 12px; border-left: 3px solid #0f6cbf; font-size: 10pt; }
+strong { color: #0f172a; }
+em { color: #666; }
+.doc-title { font-size: 26pt; text-align: center; color: #0f6cbf; font-weight: bold; margin-bottom: 8px; }
+.doc-subtitle { font-size: 14pt; text-align: center; color: #666; margin-bottom: 32px; }
+.doc-info { margin: 0 auto 24px; }
+.doc-info td:first-child { width: 120px; background: #f0f7ff; font-weight: bold; }
+.toc { background: #f8fafc; padding: 16px 24px; border: 1px solid #ddd; margin: 16px 0; }
+.section-break { page-break-before: always; }
+</style>
+</head>
+<body>
+<h1 class="doc-title">Bug管理清单</h1>
+
+<h2>1. Bug统计概览</h2>
+<table>
+<tr><th>严重级别</th><th>数量</th><th>已修复</th><th>待修复</th></tr>
+<tr><td>P0-致命</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>P1-严重</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>P2-一般</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>P3-建议</td><td>3</td><td>0</td><td>3</td></tr>
+<tr style="font-weight:bold"><td>合计</td><td>3</td><td>0</td><td>3</td></tr>
+</table>
+
+<h2>2. Bug详细清单</h2>
+
+<h3>BUG-001：前端构建第三方库 Pure Annotation 警告</h3>
+<table>
+<tr><td>严重级别</td><td>P3-建议</td><td>状态</td><td>待修复</td></tr>
+<tr><td>模块</td><td colspan="3">前端构建</td></tr>
+<tr><td>标题</td><td colspan="3">@vueuse/core 中的注释位置导致 Rolldown 警告</td></tr>
+<tr><td>复现</td><td colspan="3">执行 npm run build</td></tr>
+<tr><td>实际</td><td colspan="3">输出 [INVALID_ANNOTATION] 警告</td></tr>
+<tr><td>影响</td><td colspan="3">仅影响构建日志，不影响功能</td></tr>
+<tr><td>根因</td><td colspan="3">第三方库不兼容 Vite 8 新打包器 Rolldown</td></tr>
+<tr><td>方案</td><td colspan="3">等待 @vueuse/core 官方适配，或降级 Vite 到 5.x</td></tr>
+</table>
+
+<h3>BUG-002：大 Chunk 体积警告</h3>
+<table>
+<tr><td>严重级别</td><td>P3-建议</td><td>状态</td><td>待修复</td></tr>
+<tr><td>标题</td><td colspan="3">主 bundle 约 2MB，超过 500KB 警告阈值</td></tr>
+<tr><td>影响</td><td colspan="3">首屏加载可能较慢</td></tr>
+<tr><td>方案</td><td colspan="3">Element Plus按需引入 + ECharts按需引入 + 路由懒加载</td></tr>
+</table>
+
+<h3>BUG-003：配送任务状态可能不一致</h3>
+<table>
+<tr><td>严重级别</td><td>P3-建议</td><td>状态</td><td>待修复</td></tr>
+<tr><td>标题</td><td colspan="3">管理员手动改订单状态与配送员完成冲突</td></tr>
+<tr><td>方案</td><td colspan="3">在 completeTask() 中增加状态前置校验</td></tr>
+</table>
+
+<h2>3. 修复计划</h2>
+<table>
+<tr><th>Bug ID</th><th>计划版本</th><th>工时</th><th>备注</th></tr>
+<tr><td>BUG-001</td><td>V1.1</td><td>0h</td><td>等第三方适配</td></tr>
+<tr><td>BUG-002</td><td>V1.1</td><td>4h</td><td>性能优化</td></tr>
+<tr><td>BUG-003</td><td>V1.1</td><td>1h</td><td>增加状态校验</td></tr>
+</table>
+
+<h2>4. 结论</h2>
+<p>当前版本无阻断性Bug，<strong>0个P0/P1/P2级缺陷</strong>。3个P3级建议项已记录，计划于V1.1版本修复。系统达到可交付标准。</p>
+
+</body>
+</html>

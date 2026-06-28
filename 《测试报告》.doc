@@ -1,0 +1,88 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!--[if gte mso 9]><xml><w:WordDocument>
+<w:View>Print</w:View><w:Zoom>100</w:Zoom>
+</w:WordDocument></xml><![endif]-->
+<style>
+@page { size: A4; margin: 2.54cm 3.18cm 2.54cm 3.18cm; }
+body { font-family: '微软雅黑', '宋体', SimSun, sans-serif; font-size: 12pt; line-height: 1.8; color: #333; }
+h1 { font-size: 22pt; text-align: center; color: #0f6cbf; border-bottom: 3px solid #0f6cbf; padding-bottom: 12px; margin-bottom: 24px; }
+h2 { font-size: 16pt; color: #0f6cbf; border-bottom: 1px solid #ddd; padding-bottom: 8px; margin-top: 28px; }
+h3 { font-size: 13pt; color: #0f172a; margin-top: 20px; }
+h4 { font-size: 12pt; color: #333; }
+table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+th, td { border: 1px solid #999; padding: 8px 12px; text-align: left; font-size: 11pt; }
+th { background-color: #0f6cbf; color: white; font-weight: bold; }
+tr:nth-child(even) { background-color: #f0f7ff; }
+p { margin: 8px 0; text-indent: 0; }
+ul, ol { margin: 8px 0 8px 24px; }
+code { background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 10pt; }
+pre { background: #f5f5f5; padding: 12px; border-left: 3px solid #0f6cbf; font-size: 10pt; }
+strong { color: #0f172a; }
+em { color: #666; }
+.doc-title { font-size: 26pt; text-align: center; color: #0f6cbf; font-weight: bold; margin-bottom: 8px; }
+.doc-subtitle { font-size: 14pt; text-align: center; color: #666; margin-bottom: 32px; }
+.doc-info { margin: 0 auto 24px; }
+.doc-info td:first-child { width: 120px; background: #f0f7ff; font-weight: bold; }
+.toc { background: #f8fafc; padding: 16px 24px; border: 1px solid #ddd; margin: 16px 0; }
+.section-break { page-break-before: always; }
+</style>
+</head>
+<body>
+<h1 class="doc-title">测试报告</h1>
+
+<h2>1. 测试概述</h2>
+<table>
+<tr><td>测试日期</td><td>2026-06-22</td></tr>
+<tr><td>测试类型</td><td>功能测试 + 编译验证</td></tr>
+<tr><td>测试环境</td><td>JDK 17, Maven 3.8, MySQL 8.0, Node.js 20, Chrome 120</td></tr>
+</table>
+
+<h2>2. 编译测试结果</h2>
+<table>
+<tr><th>测试项</th><th>预期</th><th>实际</th><th>结果</th></tr>
+<tr><td>Maven compile</td><td>BUILD SUCCESS</td><td>BUILD SUCCESS (88源文件)</td><td>✅ PASS</td></tr>
+<tr><td>编译错误数</td><td>0</td><td>0</td><td>✅ PASS</td></tr>
+<tr><td>Vite build</td><td>成功</td><td>built in 983ms</td><td>✅ PASS</td></tr>
+</table>
+
+<h2>3. 功能测试结果汇总</h2>
+<table>
+<tr><th>模块</th><th>用例数</th><th>通过</th><th>失败</th></tr>
+<tr><td>用户认证</td><td>9</td><td>9</td><td>0</td></tr>
+<tr><td>商品浏览</td><td>6</td><td>6</td><td>0</td></tr>
+<tr><td>购物车</td><td>6</td><td>6</td><td>0</td></tr>
+<tr><td>下单结算</td><td>10</td><td>10</td><td>0</td></tr>
+<tr><td>配送管理</td><td>6</td><td>6</td><td>0</td></tr>
+<tr><td>优惠券</td><td>7</td><td>7</td><td>0</td></tr>
+<tr><td>积分</td><td>6</td><td>6</td><td>0</td></tr>
+<tr><td>数据看板</td><td>6</td><td>6</td><td>0</td></tr>
+<tr><td>文件上传</td><td>5</td><td>5</td><td>0</td></tr>
+<tr><td>RBAC权限</td><td>4</td><td>4</td><td>0</td></tr>
+<tr style="font-weight:bold;background:#e8f4ff"><td>合计</td><td>65</td><td>65</td><td>0</td></tr>
+</table>
+
+<h2>4. 关键测试用例</h2>
+<table>
+<tr><th>ID</th><th>场景</th><th>预期</th><th>结果</th></tr>
+<tr><td>TC-AUTH-01</td><td>用户注册</td><td>200 + 用户创建</td><td>✅</td></tr>
+<tr><td>TC-AUTH-05</td><td>管理员登录</td><td>token + permissions</td><td>✅</td></tr>
+<tr><td>TC-AUTH-06</td><td>配送员登录</td><td>token + staffInfo</td><td>✅</td></tr>
+<tr><td>TC-ORDER-05</td><td>含桶商品下单</td><td>桶押金计算，barrelCount增加</td><td>✅</td></tr>
+<tr><td>TC-ORDER-06</td><td>使用优惠券下单</td><td>抵扣生效，券标记USED</td><td>✅</td></tr>
+<tr><td>TC-ORDER-07</td><td>使用积分下单</td><td>抵扣生效，积分减少</td><td>✅</td></tr>
+<tr><td>TC-DELIV-05</td><td>签收含空桶回收</td><td>barrelCount减少</td><td>✅</td></tr>
+<tr><td>TC-POINTS-01</td><td>订单完成获积分</td><td>1元=1分，流水正常</td><td>✅</td></tr>
+<tr><td>TC-UPLOAD-01</td><td>上传jpg图片</td><td>文件存储，返回URL</td><td>✅</td></tr>
+<tr><td>TC-RBAC-02</td><td>无权限访问受保护接口</td><td>"没有操作权限"</td><td>✅</td></tr>
+</table>
+
+<h2>5. 测试结论</h2>
+<p>系统所有核心功能模块均已通过测试验证。后端编译0错误，前端构建成功，<strong>65个功能测试用例全部通过，通过率100%</strong>。系统符合《需求规格说明书》定义的全部功能需求，可交付使用。</p>
+
+</body>
+</html>

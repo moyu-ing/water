@@ -1,0 +1,130 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!--[if gte mso 9]><xml><w:WordDocument>
+<w:View>Print</w:View><w:Zoom>100</w:Zoom>
+</w:WordDocument></xml><![endif]-->
+<style>
+@page { size: A4; margin: 2.54cm 3.18cm 2.54cm 3.18cm; }
+body { font-family: '微软雅黑', '宋体', SimSun, sans-serif; font-size: 12pt; line-height: 1.8; color: #333; }
+h1 { font-size: 22pt; text-align: center; color: #0f6cbf; border-bottom: 3px solid #0f6cbf; padding-bottom: 12px; margin-bottom: 24px; }
+h2 { font-size: 16pt; color: #0f6cbf; border-bottom: 1px solid #ddd; padding-bottom: 8px; margin-top: 28px; }
+h3 { font-size: 13pt; color: #0f172a; margin-top: 20px; }
+h4 { font-size: 12pt; color: #333; }
+table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+th, td { border: 1px solid #999; padding: 8px 12px; text-align: left; font-size: 11pt; }
+th { background-color: #0f6cbf; color: white; font-weight: bold; }
+tr:nth-child(even) { background-color: #f0f7ff; }
+p { margin: 8px 0; text-indent: 0; }
+ul, ol { margin: 8px 0 8px 24px; }
+code { background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 10pt; }
+pre { background: #f5f5f5; padding: 12px; border-left: 3px solid #0f6cbf; font-size: 10pt; }
+strong { color: #0f172a; }
+em { color: #666; }
+.doc-title { font-size: 26pt; text-align: center; color: #0f6cbf; font-weight: bold; margin-bottom: 8px; }
+.doc-subtitle { font-size: 14pt; text-align: center; color: #666; margin-bottom: 32px; }
+.doc-info { margin: 0 auto 24px; }
+.doc-info td:first-child { width: 120px; background: #f0f7ff; font-weight: bold; }
+.toc { background: #f8fafc; padding: 16px 24px; border: 1px solid #ddd; margin: 16px 0; }
+.section-break { page-break-before: always; }
+</style>
+</head>
+<body>
+<h1 class="doc-title">概要设计说明书（HLD）</h1>
+
+<h2>1. 系统架构</h2>
+<pre>
+┌──────────────────────────────────────────────────┐
+│                   客户端层                        │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐        │
+│  │ 用户商城  │ │ 管理后台  │ │ 配送员端  │        │
+│  │ Vue 3 SPA│ │ Vue 3 SPA│ │ Vue 3 SPA│        │
+│  └────┬─────┘ └────┬─────┘ └────┬─────┘        │
+│       └─────────────┼────────────┘              │
+│                     │ HTTP/REST                  │
+├─────────────────────┼────────────────────────────┤
+│                 服务层                            │
+│       ┌─────────────┴─────────────┐             │
+│       │     Spring Boot 3.2       │             │
+│       │  ┌───────────────────┐    │             │
+│       │  │ AuthInterceptor   │    │             │
+│       │  │ (JWT + RBAC校验)   │    │             │
+│       │  ├───────────────────┤    │             │
+│       │  │ 14个 Controller   │    │             │
+│       │  ├───────────────────┤    │             │
+│       │  │ 8个 Service       │    │             │
+│       │  ├───────────────────┤    │             │
+│       │  │ MyBatis-Plus      │    │             │
+│       │  └───────────────────┘    │             │
+│       └─────────────┬─────────────┘             │
+│                     │                            │
+├─────────────────────┼────────────────────────────┤
+│                 数据层                            │
+│       ┌─────────────┴─────────────┐             │
+│       │  MySQL 8.0 (18张表)        │             │
+│       │  本地文件系统 (uploads/)    │             │
+│       └───────────────────────────┘             │
+└──────────────────────────────────────────────────┘
+</pre>
+
+<h2>2. 技术架构分层</h2>
+<table>
+<tr><th>层级</th><th>技术</th><th>职责</th></tr>
+<tr><td>视图层</td><td>Vue 3 + Element Plus + ECharts</td><td>UI渲染、用户交互</td></tr>
+<tr><td>状态层</td><td>Pinia (3个Store) + localStorage</td><td>全局状态、Token持久化</td></tr>
+<tr><td>路由层</td><td>Vue Router 4 + 导航守卫</td><td>SPA路由、权限校验</td></tr>
+<tr><td>通信层</td><td>Axios + 拦截器</td><td>HTTP通信、Token注入</td></tr>
+<tr><td>API层</td><td>Spring MVC Controller</td><td>接口暴露、参数校验</td></tr>
+<tr><td>业务层</td><td>Spring Service</td><td>业务编排、事务管理</td></tr>
+<tr><td>数据层</td><td>MyBatis-Plus Mapper</td><td>数据持久化</td></tr>
+<tr><td>存储层</td><td>MySQL 8.0 + 本地文件</td><td>结构化数据 + 静态文件</td></tr>
+</table>
+
+<h2>3. 接口设计规范</h2>
+<table>
+<tr><th>项目</th><th>规范</th></tr>
+<tr><td>协议</td><td>HTTP/1.1</td></tr>
+<tr><td>数据格式</td><td>JSON</td></tr>
+<tr><td>统一响应</td><td>{ "code": 200, "message": "success", "data": {...} }</td></tr>
+<tr><td>认证方式</td><td>Header: Authorization: Bearer {JWT}</td></tr>
+</table>
+
+<h2>4. 接口分组</h2>
+<table>
+<tr><th>分组</th><th>前缀</th><th>认证</th><th>权限</th></tr>
+<tr><td>公开接口</td><td>/api/public/**</td><td>无</td><td>无</td></tr>
+<tr><td>用户认证</td><td>/api/user/auth/**</td><td>无(login) / USER JWT</td><td>无</td></tr>
+<tr><td>用户业务</td><td>/api/user/**</td><td>USER JWT</td><td>登录即可</td></tr>
+<tr><td>管理员认证</td><td>/api/admin/auth/**</td><td>无(login) / ADMIN JWT</td><td>无</td></tr>
+<tr><td>管理员业务</td><td>/api/admin/**</td><td>ADMIN JWT</td><td>RBAC校验</td></tr>
+<tr><td>配送员认证</td><td>/api/delivery/login</td><td>无</td><td>无</td></tr>
+<tr><td>配送员业务</td><td>/api/delivery/**</td><td>DELIVERY_STAFF JWT</td><td>登录即可</td></tr>
+</table>
+
+<h2>5. RBAC权限模型</h2>
+<pre>
+admin_user ──(N:M)── admin_user_role ──(N:1)── admin_role
+    ──(N:M)── admin_role_menu ──(N:1)── admin_menu
+                                            │
+                                     permission_code
+</pre>
+<p>菜单类型：type=1 页面权限（控制路由可见性）；type=2 按钮权限（控制API操作）</p>
+<p>校验机制：@RequirePermission 注解 + AuthInterceptor 拦截器实时校验</p>
+
+<h2>6. 关键技术决策</h2>
+<table>
+<tr><th>决策点</th><th>方案</th><th>理由</th></tr>
+<tr><td>ORM</td><td>MyBatis-Plus</td><td>Lambda类型安全，零XML</td></tr>
+<tr><td>认证</td><td>JWT</td><td>无状态，适合前后端分离</td></tr>
+<tr><td>密码加密</td><td>BCrypt</td><td>自适应盐值，行业标准</td></tr>
+<tr><td>前端状态</td><td>Pinia</td><td>Vue3官方推荐</td></tr>
+<tr><td>UI框架</td><td>Element Plus</td><td>组件丰富，中文生态好</td></tr>
+<tr><td>图表</td><td>ECharts</td><td>功能强大</td></tr>
+<tr><td>文件存储</td><td>本地文件系统</td><td>项目规模小</td></tr>
+</table>
+
+</body>
+</html>
